@@ -13,5 +13,5 @@ from parts import get_bottom_panel, get_long_side_panel
 bottom_panel = get_bottom_panel(BOX_X, BOX_Y, PLY_THICKNESS, ROUTE_DEPTH)
 long_side_panel = get_long_side_panel(BOX_X, BOX_Z, PLY_THICKNESS, ROUTE_DEPTH)
 
-# show_object(bottom_panel, name="Bottom Panel")
-show_object(long_side_panel, name="Long Side Panel")
+# pylint: disable=undefined-variable
+show_object(long_side_panel, name="Long Side Panel") # type: ignore
