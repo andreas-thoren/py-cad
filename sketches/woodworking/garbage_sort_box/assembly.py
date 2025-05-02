@@ -1,4 +1,6 @@
+import pathlib
 import cadquery as cq
+from cadquery import exporters
 from measurements import (
     PLY_THICKNESS,
     BOX_X,
@@ -41,6 +43,10 @@ assy.add(
     loc=cq.Location(cq.Vector(-(BOX_X - PLY_THICKNESS) / 2, 0, BOX_Z / 2)),
     color=cq.Color("burlywood4"),
 )
+
+# Dont seem like I can export the assembly to SVG
+# path = str(pathlib.Path(__file__).parent / "test.svg")
+# long_side_panel.export(path)
 
 # pylint: disable=undefined-variable
 show_object(assy)  # type: ignore
