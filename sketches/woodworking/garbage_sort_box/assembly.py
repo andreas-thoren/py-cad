@@ -1,6 +1,4 @@
-import pathlib
 import cadquery as cq
-from cadquery import exporters
 from measurements import (
     PLY_THICKNESS,
     BOX_X,
@@ -9,7 +7,6 @@ from measurements import (
 )
 from parts import get_bottom_panel, get_long_side_panel, get_short_side_panel
 
-# create the parts
 bottom_panel = get_bottom_panel()
 long_side_panel = get_long_side_panel()
 long_side_panel_inverse = get_long_side_panel(True)
@@ -49,16 +46,11 @@ def get_assembly(visual_offset=0):
     )
     return assy
 
-# Dont seem like I can export the assembly to SVG
-# path = str(pathlib.Path(__file__).parent / "test.svg")
-# long_side_panel.export(path)
-
-# pylint: disable=undefined-variable
-assy = get_assembly()
+assembly = get_assembly()
 
 try:
-    show_object(assy)  # type: ignore
+    show_object(assembly)  # type: ignore
 except NameError:
     if __name__ == "__main__":
         print("Exporting assembly to .step for use in freecad.")
-        assy.export("garbage_sort_box_assembly.step")
+        assembly.export("garbage_sort_box_assembly.step")
