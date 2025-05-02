@@ -5,9 +5,13 @@ ROUTE_DEPTH = PLY_THICKNESS / 2
 # Box dimensions
 BOX_X = 600
 BOX_Y = 300
-BOX_Z = 300
+BOX_Z = 150
 
 # Divider dimensions
 DIVIDER_X = BOX_Y - PLY_THICKNESS
 DIVIDER_Y = 300
 DIVIDER_Z = 300
+
+# Calculated dimensions
+OFFSET_Z = PLY_THICKNESS - ROUTE_DEPTH
+PANEL_Z = BOX_Z - OFFSET_Z

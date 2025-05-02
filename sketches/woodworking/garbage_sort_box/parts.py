@@ -1,37 +1,47 @@
 import cadquery as cq
+from measurements import (
+    PLY_THICKNESS,
+    ROUTE_DEPTH,
+    BOX_X,
+    BOX_Y,
+    PANEL_Z,
+    DIVIDER_X,
+    DIVIDER_Y,
+    DIVIDER_Z,
+)
 
-def get_bottom_panel(length, width, thickness, route_depth):
+def get_bottom_panel():
     return (
      cq.Workplane("XY")
-     .box(length, width, thickness-route_depth)
+     .box(BOX_X, BOX_Y, PLY_THICKNESS-ROUTE_DEPTH)
      .faces(">Z")
      .workplane()
-     .rect(length-thickness, width-thickness)
-     .extrude(route_depth)
+     .rect(BOX_X-PLY_THICKNESS*2, BOX_Y-PLY_THICKNESS*2)
+     .extrude(ROUTE_DEPTH)
     )
 
-def get_short_side_panel(length, height, thickness):
+def get_short_side_panel():
     return (
-     cq.Workplane("XY")
-     .box(length, height, thickness)
+     cq.Workplane("YZ")
+     .box(BOX_Y, PANEL_Z, PLY_THICKNESS)
     )
 
-def get_long_side_panel(length, height, thickness, route_depth, invert_grooves=False):
-    groove_offset = length/2 - thickness/2
+def get_long_side_panel(invert_grooves=False):
+    groove_offset = BOX_X/2 - PLY_THICKNESS/2
     groove_face = ">Y" if invert_grooves else "<Y"
     divider_width = 50
 
     return (
         cq.Workplane("XZ")
-        .box(length, height, thickness)
+        .box(BOX_X, PANEL_Z, PLY_THICKNESS)
         .faces(groove_face)
         .workplane()
         .pushPoints([(groove_offset, 0), (-groove_offset, 0)])
-        .rect(thickness, height)
-        .cutBlind(-route_depth)
+        .rect(PLY_THICKNESS, PANEL_Z)
+        .cutBlind(-ROUTE_DEPTH)
         .faces(groove_face)
         .workplane()
-        .moveTo(0, (height-divider_width)/2)
-        .rect(thickness, divider_width)
-        .cutBlind(-route_depth)
+        .moveTo(0, (PANEL_Z-divider_width)/2)
+        .rect(PLY_THICKNESS, divider_width)
+        .cutBlind(-ROUTE_DEPTH)
     )
