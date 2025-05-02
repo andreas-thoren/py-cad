@@ -1,8 +1,13 @@
-# Box dimensions
-BOX_LENGTH = 600
-BOX_WIDTH = 300
-BOX_HEIGHT = 300
-
 # Project dimensions
 PLY_THICKNESS = 9
 ROUTE_DEPTH = PLY_THICKNESS / 2
+
+# Box dimensions
+BOX_X = 600
+BOX_Y = 300
+BOX_Z = 300
+
+# Divider dimensions
+DIVIDER_X = BOX_Y - PLY_THICKNESS
+DIVIDER_Y = 300
+DIVIDER_Z = 300

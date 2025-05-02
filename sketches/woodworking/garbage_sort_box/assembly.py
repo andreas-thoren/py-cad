@@ -1,8 +1,17 @@
-from measurements import BOX_WIDTH, BOX_LENGTH, BOX_HEIGHT, PLY_THICKNESS, ROUTE_DEPTH
+from measurements import (
+    PLY_THICKNESS,
+    ROUTE_DEPTH,
+    BOX_X,
+    BOX_Y,
+    BOX_Z,
+    DIVIDER_X,
+    DIVIDER_Y,
+    DIVIDER_Z,
+)
 from parts import get_bottom_panel, get_long_side_panel
 
-bottom_panel = get_bottom_panel(BOX_LENGTH, BOX_WIDTH, PLY_THICKNESS, ROUTE_DEPTH)
-long_side_panel = get_long_side_panel(BOX_LENGTH, BOX_HEIGHT, PLY_THICKNESS, ROUTE_DEPTH)
+bottom_panel = get_bottom_panel(BOX_X, BOX_Y, PLY_THICKNESS, ROUTE_DEPTH)
+long_side_panel = get_long_side_panel(BOX_X, BOX_Z, PLY_THICKNESS, ROUTE_DEPTH)
 
 # show_object(bottom_panel, name="Bottom Panel")
 show_object(long_side_panel, name="Long Side Panel")

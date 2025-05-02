@@ -10,19 +10,15 @@ def get_bottom_panel(length, width, thickness, route_depth):
      .extrude(route_depth)
     )
 
-def get_long_side_panel_old(length, height, thickness, route_depth):
+def get_short_side_panel(length, height, thickness):
     return (
      cq.Workplane("XY")
-     .box(length, height, thickness-route_depth)
-     .faces(">Z")
-     .workplane()
-     .center(0, thickness/2)
-     .rect(length, height-thickness)
-     .extrude(route_depth)
+     .box(length, height, thickness)
     )
 
 def get_long_side_panel(length, height, thickness, route_depth):
     groove_offset = length/2 - thickness/2
+
     return (
         cq.Workplane("XY")
         .box(length, height, thickness)
