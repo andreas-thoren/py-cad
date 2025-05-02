@@ -54,3 +54,4 @@ except NameError:
     if __name__ == "__main__":
         print("Exporting assembly to .step for use in freecad.")
         assembly.export("garbage_sort_box_assembly.step")
+        # cq.exporters.export(assembly.toCompound(), "garbage_sort_box_assembly.svg")
