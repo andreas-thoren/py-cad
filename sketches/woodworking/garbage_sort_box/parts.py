@@ -4,6 +4,7 @@ from measurements import (
     ROUTE_DEPTH,
     BOX_X,
     BOX_Y,
+    PANEL_Y,
     PANEL_Z,
     DIVIDER_X,
     DIVIDER_Y,
@@ -23,7 +24,7 @@ def get_bottom_panel():
 def get_short_side_panel():
     return (
      cq.Workplane("YZ")
-     .box(BOX_Y, PANEL_Z, PLY_THICKNESS)
+     .box(PANEL_Y, PANEL_Z, PLY_THICKNESS)
     )
 
 def get_long_side_panel(invert_grooves=False):
