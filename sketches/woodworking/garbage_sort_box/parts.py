@@ -1,7 +1,7 @@
 import cadquery as cq
 
 def get_bottom_panel(length, width, thickness, route_depth):
-    bottom_panel = (
+    return (
      cq.Workplane("XY")
      .box(length, width, thickness-route_depth)
      .faces(">Z")
@@ -9,10 +9,9 @@ def get_bottom_panel(length, width, thickness, route_depth):
      .rect(length-thickness, width-thickness)
      .extrude(route_depth)
     )
-    return bottom_panel
 
-def get_long_side_panel(length, height, thickness, route_depth):
-    long_side_panel = (
+def get_long_side_panel_old(length, height, thickness, route_depth):
+    return (
      cq.Workplane("XY")
      .box(length, height, thickness-route_depth)
      .faces(">Z")
@@ -21,4 +20,13 @@ def get_long_side_panel(length, height, thickness, route_depth):
      .rect(length, height-thickness)
      .extrude(route_depth)
     )
-    return long_side_panel
+
+def get_long_side_panel(length, height, thickness, route_depth):
+    groove_offset = length/2 - thickness/2
+    return (
+        cq.Workplane("XY")
+        .box(length, height, thickness)
+        .pushPoints([(groove_offset, 0), (-groove_offset, 0)])
+        .rect(thickness, height)
+        .cutBlind(route_depth)
+    )
