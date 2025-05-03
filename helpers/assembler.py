@@ -20,7 +20,7 @@ def assembler_factory(
     Args:
         parts_data: An iterable of (key, cq_object, metadata) tuples.
             - 'key' must be hashable. It identifies potential parts in the assembly.
-              Defines the possible list_items for part_keys upon instantiation.
+              Defines valid list items for part_keys upon instantiation.
             - 'cq_object' must be a cadquery Workplane.
             - 'metadata' is a dictionary describing part properties such as color or location.
             - Metadata keys should match keyword arguments for cq.Assembly.add method.
