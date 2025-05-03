@@ -1,5 +1,12 @@
 from collections.abc import Hashable, Iterable
+from dataclasses import dataclass
 import cadquery as cq
+
+
+@dataclass
+class Part:
+    cq_object: cq.Workplane
+    metadata: dict
 
 
 def assembler_factory(
@@ -9,12 +16,10 @@ def assembler_factory(
 ) -> type:
 
     class Assembler:
-        part_types = set()
-        parts = {}
-        parts_metadata = {}
+        parts: dict[Hashable, Part] = {}
 
         def __init__(self, part_keys: list | None = None, **kwargs):
-            self.part_keys = part_keys or list(Assembler.part_types)
+            self.part_keys = part_keys or list(Assembler.parts.keys())
             optional_attributes = inst_attributes.copy() if inst_attributes else {}
 
             attributes_to_set = {}
@@ -33,22 +38,34 @@ def assembler_factory(
 
         def assemble(self) -> cq.Assembly:
             assy = cq.Assembly()
-            for part_key in self.part_keys:
-                part = self.parts[part_key]
-                metadata = self.parts_metadata[part_key].copy()
 
+            for part_key in self.part_keys:
+                try:
+                    part = self.parts[part_key]
+                except KeyError as exc:
+                    raise ValueError(
+                        f"Part '{part_key}' not found in instance of {self.__class__.__name__}.\n"
+                        f"Available parts are: {list(self.parts.keys())}\n"
+                    ) from exc
+
+                metadata = part.metadata.copy()
                 for key, value in metadata.items():
                     if callable(value):
                         metadata[key] = value(self)
 
-                assy.add(part, **metadata)
+                assy.add(part.cq_object, **metadata)
             return assy
+        
+        def __repr__(self) -> str:
+            attrs = [f"part_keys={self.part_keys}"]
+            for key in vars(self):
+                if key != "part_keys":
+                    attrs.append(f"{key}={getattr(self, key)!r}")
+            return f"{self.__class__.__name__}({', '.join(attrs)})"
 
     for part in parts_data:
-        part_name, part_type, part_metadata = part
-        Assembler.part_types.add(part_name)
-        Assembler.parts[part_name] = part_type
-        Assembler.parts_metadata[part_name] = part_metadata
+        part_key, cq_object, metadata = part
+        Assembler.parts[part_key] = Part(cq_object, metadata)
 
     if cls_attributes:
         for key, value in cls_attributes.items():
