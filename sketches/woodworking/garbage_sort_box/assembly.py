@@ -1,10 +1,10 @@
 import cadquery as cq
 import measurements as m
-from parts import Part
+from parts import PartType, PARTS, PARTS_METADATA
 
 
 class Assembler:
-    """To update/add parts, modify the `parts_data` property."""
+    """To update/add parts, modify `PartType`, `PARTS` and `PARTS_METADATA` in parts.py."""
 
     z_offset = m.BOX_Z / 2
 
@@ -16,44 +16,16 @@ class Assembler:
     def y_offset(self):
         return ((m.BOX_Y - m.PLY_THICKNESS) / 2) + self.visual_offset
 
-    def __init__(self, parts: list | None = None, visual_offset: int = 0):
-        self.parts = parts or list(Part)
+    def __init__(self, part_types: list | None = None, visual_offset: int = 0):
+        self.part_types = part_types or list(PartType)
         self.visual_offset = visual_offset
 
-    @property
-    def parts_data(self):
-        # pylint: disable=no-value-for-parameter
-        parts = {
-            Part.BOTTOM: {
-                "name": "Bottom Panel",
-                "color": cq.Color("burlywood"),
-            },
-            Part.LONG_SIDE: {
-                "loc": cq.Location(cq.Vector((0, self.y_offset, self.z_offset))),
-                "name": "Long side panel",
-                "color": cq.Color("burlywood2"),
-            },
-            Part.LONG_SIDE_INVERSE: {
-                "loc": cq.Location(cq.Vector((0, -self.y_offset, self.z_offset))),
-                "name": "Long side panel inverse",
-                "color": cq.Color("burlywood2"),
-            },
-            Part.SHORT_SIDE: {
-                "loc": cq.Location(cq.Vector((self.x_offset, 0, self.z_offset))),
-                "name": "Short side panel",
-                "color": cq.Color("burlywood4"),
-            },
-            Part.SHORT_SIDE_INVERSE: {
-                "loc": cq.Location(cq.Vector((-self.x_offset, 0, self.z_offset))),
-                "name": "Short side panel inverse",
-                "color": cq.Color("burlywood4"),
-            },
-        }
-
-        return {key: value for key, value in parts.items() if key in self.parts}
-
-    def assemble(self):
-        assembly = cq.Assembly()
-        for part, data in self.parts_data.items():
-            assembly.add(part.value, **data)
-        return assembly
+    def assemble(self) -> cq.Assembly:
+        assy = cq.Assembly()
+        for part_type in self.part_types:
+            part = PARTS[part_type]
+            data = PARTS_METADATA[part_type].copy()
+            if callable(data.get("loc")):
+                data["loc"] = data["loc"](self)
+            assy.add(part, **data)
+        return assy
