@@ -1,5 +1,4 @@
-from sketches.garbage_sort_box.parts import PartType
-from sketches.garbage_sort_box.assembly import Assembler
+from sketches.garbage_sort_box.assembly import Assembler, PartType
 
 # pylint: disable=undefined-variable
 
