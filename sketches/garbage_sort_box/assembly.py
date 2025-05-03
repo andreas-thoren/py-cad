@@ -32,9 +32,7 @@ parts_data: tuple[tuple[Hashable, cq.Workplane, dict]] = (
         {
             "name": "Long side panel",
             "color": cq.Color("burlywood2"),
-            "loc": lambda assembler: cq.Location(
-                cq.Vector((0, assembler.y_offset, assembler.z_offset))
-            ),
+            "loc": lambda ass: cq.Location((0, ass.y_offset, ass.z_offset)),
         },
     ),
     (
@@ -43,9 +41,7 @@ parts_data: tuple[tuple[Hashable, cq.Workplane, dict]] = (
         {
             "name": "Long side panel inverse",
             "color": cq.Color("burlywood2"),
-            "loc": lambda assembler: cq.Location(
-                cq.Vector((0, -assembler.y_offset, assembler.z_offset))
-            ),
+            "loc": lambda ass: cq.Location((0, -ass.y_offset, ass.z_offset)),
         },
     ),
     (
@@ -54,9 +50,7 @@ parts_data: tuple[tuple[Hashable, cq.Workplane, dict]] = (
         {
             "name": "Short side panel",
             "color": cq.Color("burlywood4"),
-            "loc": lambda assembler: cq.Location(
-                cq.Vector((assembler.x_offset, 0, assembler.z_offset))
-            ),
+            "loc": lambda ass: cq.Location((ass.x_offset, 0, ass.z_offset)),
         },
     ),
     (
@@ -65,9 +59,7 @@ parts_data: tuple[tuple[Hashable, cq.Workplane, dict]] = (
         {
             "name": "Short side panel inverse",
             "color": cq.Color("burlywood4"),
-            "loc": lambda assembler: cq.Location(
-                cq.Vector((-assembler.x_offset, 0, assembler.z_offset))
-            ),
+            "loc": lambda ass: cq.Location((-ass.x_offset, 0, ass.z_offset)),
         },
     ),
 )
