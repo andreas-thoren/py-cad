@@ -1,4 +1,4 @@
-from typing import ClassVar
+from enum import Enum
 import cadquery as cq
 import measurements as m
 
@@ -41,8 +41,9 @@ class _Builder:
         )
 
 
-class Part:
-    bottom: ClassVar[cq.Workplane] = _Builder.get_bottom_panel()
-    long_side: ClassVar[cq.Workplane] = _Builder.get_long_side_panel()
-    long_side_inverse: ClassVar[cq.Workplane] = _Builder.get_long_side_panel(True)
-    short_side: ClassVar[cq.Workplane] = _Builder.get_short_side_panel()
+class Part(Enum):
+    BOTTOM: cq.Workplane = _Builder.get_bottom_panel()
+    LONG_SIDE: cq.Workplane = _Builder.get_long_side_panel()
+    LONG_SIDE_INVERSE: cq.Workplane = _Builder.get_long_side_panel(True)
+    SHORT_SIDE: cq.Workplane = _Builder.get_short_side_panel()
+    SHORT_SIDE_INVERSE: cq.Workplane = _Builder.get_short_side_panel()
