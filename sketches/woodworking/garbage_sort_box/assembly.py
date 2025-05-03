@@ -13,13 +13,29 @@ class AssemblerProtocol(Protocol):
 def assembler_factory(
     parts_data: Iterable[tuple[Hashable, cq.Workplane, dict]],
     cls_attributes: dict | None = None,
+    inst_attributes: dict | None = None,
 ) -> type[AssemblerProtocol]:
 
     def __init__(
-        self: AssemblerProtocol, part_keys: list | None = None, visual_offset: int = 0
+        self: AssemblerProtocol, part_keys: list | None = None, **kwargs
     ):
         self.part_keys = part_keys or list(self.part_types)
-        self.visual_offset = visual_offset
+        optional_attributes = inst_attributes.copy() if inst_attributes else {}
+
+        attributes_to_set = {}
+        for key, value in kwargs.items():
+            if key not in optional_attributes:
+                raise AttributeError(
+                    f"Invalid attribute '{key}' provided to {self.__class__.__name__}.\n"
+                    f"Allowed attributes are: {optional_attributes.keys()}\n"
+                )
+            attributes_to_set[key] = value
+            del optional_attributes[key]
+
+        attributes_to_set.update(optional_attributes)
+        for key, value in attributes_to_set.items():
+            setattr(self, key, value)
+
 
     def assemble(self) -> cq.Assembly:
         assy = cq.Assembly()
@@ -62,4 +78,5 @@ Assembler = assembler_factory(
             lambda self: ((m.BOX_Y - m.PLY_THICKNESS) / 2) + self.visual_offset
         ),
     },
+    inst_attributes={"visual_offset": 0},
 )
