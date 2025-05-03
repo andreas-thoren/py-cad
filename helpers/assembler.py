@@ -23,9 +23,9 @@ def assembler_factory(
               Defines valid list items for part_keys upon instantiation.
             - 'cq_object' must be a cadquery Workplane.
             - 'metadata' is a dictionary describing part properties such as color or location.
-            - Metadata keys should match keyword arguments for cq.Assembly.add method.
-              Metadata values can be static or callables (e.g., lambdas).
-              Callables will be evaluated at assembly time, passing the instance as argument.
+               metadata keys should match valid keyword arguments for the cq.Assembly.add method.
+               metadata values can be static or callables (e.g., lambdas).
+               Callables will be evaluated at assembly time, passing the instance as argument.
 
         cls_attributes: Optional dictionary of class-level attributes to inject,
             typically constants or computed properties.
