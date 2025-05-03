@@ -1,10 +1,10 @@
 import sketches.garbage_sort_box.measurements as m
 from helpers.assembler import assembler_factory
-from .parts import PartType, PARTS, PARTS_METADATA
+from .parts import parts
 
 
 Assembler = assembler_factory(
-    tuple(zip(PartType, PARTS.values(), PARTS_METADATA.values())),
+    parts_data=parts,
     cls_attributes={
         "z_offset": m.BOX_Z / 2,
         "x_offset": property(

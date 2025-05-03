@@ -14,6 +14,29 @@ def assembler_factory(
     cls_attributes: dict | None = None,
     inst_attributes: dict | None = None,
 ) -> type:
+    """
+    Creates a customized Assembler class for assembling cadquery parts.
+
+    Args:
+        parts_data: An iterable of (key, cq_object, metadata) tuples.
+            - 'key' must be hashable. It identifies potential parts in the assembly.
+              Defines the possible list_items for part_keys upon instantiation.
+            - 'cq_object' must be a cadquery Workplane.
+            - 'metadata' is a dictionary describing part properties such as color or location.
+            - Metadata keys should match keyword arguments for cq.Assembly.add method.
+              Metadata values can be static or callables (e.g., lambdas).
+              Callables will be evaluated at assembly time, passing the instance as argument.
+
+        cls_attributes: Optional dictionary of class-level attributes to inject,
+            typically constants or computed properties.
+            Useful for metadata callables that depend on assembler properties (e.g., x_offset, y_offset).
+
+        inst_attributes: Optional dictionary of allowed instance attributes with default values.
+            These can be overridden per instance and accessed by metadata callables during assembly.
+
+    Returns:
+        A dynamically generated Assembler class.
+    """
 
     class Assembler:
         parts: dict[Hashable, Part] = {}
@@ -55,7 +78,7 @@ def assembler_factory(
 
                 assy.add(part.cq_object, **metadata)
             return assy
-        
+
         def __repr__(self) -> str:
             attrs = [f"part_keys={self.part_keys}"]
             for key in vars(self):

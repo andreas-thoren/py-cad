@@ -1,3 +1,4 @@
+from collections.abc import Hashable
 from enum import Enum, auto
 import cadquery as cq
 import sketches.garbage_sort_box.measurements as m
@@ -49,48 +50,58 @@ class PartType(Enum):
     SHORT_SIDE_INVERSE = auto()
 
 
-# Mapping of part types to their corresponding cadquery objects
-PARTS: dict[PartType, cq.Workplane] = {
-    PartType.BOTTOM: _Builder.get_bottom_panel(),
-    PartType.LONG_SIDE: _Builder.get_long_side_panel(),
-    PartType.LONG_SIDE_INVERSE: _Builder.get_long_side_panel(True),
-    PartType.SHORT_SIDE: _Builder.get_short_side_panel(),
-    PartType.SHORT_SIDE_INVERSE: _Builder.get_short_side_panel(),
-}
-
 # pylint: disable=no-value-for-parameter
-# Data for use in the assembly
-PARTS_METADATA: dict[PartType, dict] = {
-    PartType.BOTTOM: {
-        "name": "Bottom Panel",
-        "color": cq.Color("burlywood"),
-    },
-    PartType.LONG_SIDE: {
-        "name": "Long side panel",
-        "color": cq.Color("burlywood2"),
-        "loc": lambda assembler: cq.Location(
-            cq.Vector((0, assembler.y_offset, assembler.z_offset))
-        ),
-    },
-    PartType.LONG_SIDE_INVERSE: {
-        "name": "Long side panel inverse",
-        "color": cq.Color("burlywood2"),
-        "loc": lambda assembler: cq.Location(
-            cq.Vector((0, -assembler.y_offset, assembler.z_offset))
-        ),
-    },
-    PartType.SHORT_SIDE: {
-        "name": "Short side panel",
-        "color": cq.Color("burlywood4"),
-        "loc": lambda assembler: cq.Location(
-            cq.Vector((assembler.x_offset, 0, assembler.z_offset))
-        ),
-    },
-    PartType.SHORT_SIDE_INVERSE: {
-        "name": "Short side panel inverse",
-        "color": cq.Color("burlywood4"),
-        "loc": lambda assembler: cq.Location(
-            cq.Vector((-assembler.x_offset, 0, assembler.z_offset))
-        ),
-    },
-}
+parts: tuple[tuple[Hashable, cq.Workplane, dict]] = (
+    (
+        PartType.BOTTOM,
+        _Builder.get_bottom_panel(),
+        {
+            "name": "Bottom Panel",
+            "color": cq.Color("burlywood"),
+        },
+    ),
+    (
+        PartType.LONG_SIDE,
+        _Builder.get_long_side_panel(),
+        {
+            "name": "Long side panel",
+            "color": cq.Color("burlywood2"),
+            "loc": lambda assembler: cq.Location(
+                cq.Vector((0, assembler.y_offset, assembler.z_offset))
+            ),
+        },
+    ),
+    (
+        PartType.LONG_SIDE_INVERSE,
+        _Builder.get_long_side_panel(True),
+        {
+            "name": "Long side panel inverse",
+            "color": cq.Color("burlywood2"),
+            "loc": lambda assembler: cq.Location(
+                cq.Vector((0, -assembler.y_offset, assembler.z_offset))
+            ),
+        },
+    ),
+    (
+        PartType.SHORT_SIDE,
+        _Builder.get_short_side_panel(),
+        {
+            "name": "Short side panel",
+            "color": cq.Color("burlywood4"),
+            "loc": lambda assembler: cq.Location(
+                cq.Vector((assembler.x_offset, 0, assembler.z_offset))
+            ),
+        },
+    ),
+    (
+        PartType.SHORT_SIDE_INVERSE,
+        _Builder.get_short_side_panel(),
+        {
+            "name": "Short side panel inverse",
+            "color": cq.Color("burlywood4"),
+            "loc": lambda assembler: cq.Location(
+                cq.Vector((-assembler.x_offset, 0, assembler.z_offset))
+            ),
+        },
+    ),
+)
