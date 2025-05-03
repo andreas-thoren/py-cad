@@ -1,6 +1,6 @@
 from enum import Enum, auto
 import cadquery as cq
-import measurements as m
+import sketches.garbage_sort_box.measurements as m
 
 
 class _Builder:
