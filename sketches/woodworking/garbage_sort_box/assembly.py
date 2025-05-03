@@ -38,4 +38,4 @@ def get_assembly(visual_offset=0):
     return assy
 
 
-assembly = get_assembly()
+full_assembly = get_assembly()
