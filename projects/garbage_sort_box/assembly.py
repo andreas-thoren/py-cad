@@ -1,8 +1,8 @@
 from collections.abc import Hashable
 from enum import Enum, auto
 import cadquery as cq
-import sketches.garbage_sort_box.measurements as m
-from sketches.garbage_sort_box import parts
+import projects.garbage_sort_box.measurements as m
+from projects.garbage_sort_box import parts
 from helpers.assembler import assembler_factory
 
 

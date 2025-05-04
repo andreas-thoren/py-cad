@@ -1,5 +1,5 @@
 import cadquery as cq
-import sketches.garbage_sort_box.measurements as m
+import projects.garbage_sort_box.measurements as m
 
 
 # Reusable part utility functions
