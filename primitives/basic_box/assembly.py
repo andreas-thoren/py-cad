@@ -11,7 +11,7 @@ def get_parts_data(x_len, y_len, z_len, thickness) -> tuple[tuple[Hashable, cq.W
     return (
         (
             PartType.BOTTOM,
-            get_bottom_panel(x_len, y_len, z_len, thickness, 0),
+            get_bottom_panel(x_len, y_len, z_len, thickness, route_depth),
             {
                 "name": "Bottom panel",
                 "color": cq.Color("burlywood"),
@@ -19,7 +19,7 @@ def get_parts_data(x_len, y_len, z_len, thickness) -> tuple[tuple[Hashable, cq.W
         ),
         (
             PartType.LONG_SIDE,
-            parts.long_side,
+            get_long_side_panel(x_len, y_len, z_len, route_depth),
             {
                 "name": "Long side panel",
                 "color": cq.Color("burlywood2"),
@@ -28,7 +28,7 @@ def get_parts_data(x_len, y_len, z_len, thickness) -> tuple[tuple[Hashable, cq.W
         ),
         (
             PartType.LONG_SIDE_INVERSE,
-            parts.long_side_inverse,
+            get_long_side_panel(x_len, y_len, z_len, route_depth, True),
             {
                 "name": "Long side panel inverse",
                 "color": cq.Color("burlywood2"),
@@ -37,7 +37,7 @@ def get_parts_data(x_len, y_len, z_len, thickness) -> tuple[tuple[Hashable, cq.W
         ),
         (
             PartType.SHORT_SIDE,
-            parts.short_side,
+            get_short_side_panel(x_len, y_len, z_len),
             {
                 "name": "Short side panel",
                 "color": cq.Color("burlywood4"),
@@ -46,7 +46,7 @@ def get_parts_data(x_len, y_len, z_len, thickness) -> tuple[tuple[Hashable, cq.W
         ),
         (
             PartType.SHORT_SIDE_INVERSE,
-            parts.short_side,
+            get_short_side_panel(x_len, y_len, z_len),
             {
                 "name": "Short side panel inverse",
                 "color": cq.Color("burlywood4"),

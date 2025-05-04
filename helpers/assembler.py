@@ -1,4 +1,5 @@
 from collections.abc import Hashable, Iterable
+from typing import Protocol, Any, Type
 from dataclasses import dataclass
 import cadquery as cq
 
@@ -9,11 +10,19 @@ class Part:
     metadata: dict
 
 
+class AssemblerProtocol(Protocol):
+    parts: dict[Hashable, Part]
+
+    def __init__(self, part_keys: list[Hashable] | None = None, **kwargs: Any) -> None: ...
+    def assemble(self) -> cq.Assembly: ...
+    def __repr__(self) -> str: ...
+
+
 def assembler_factory(
     parts_data: Iterable[tuple[Hashable, cq.Workplane, dict]],
     cls_attributes: dict | None = None,
     inst_attributes: dict | None = None,
-) -> type:
+) -> Type[AssemblerProtocol]:
     """
     Creates a customized Assembler class for assembling cadquery parts.
 
