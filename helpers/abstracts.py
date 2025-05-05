@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from enum import Enum
 import cadquery as cq
+from .models import DimensionData
 
 
 class DimensionMixin:
