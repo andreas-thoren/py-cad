@@ -5,8 +5,8 @@ def show_garbage_sort_box():
 
     assembler = Assembler(m.BOX_X, m.BOX_Y, m.BOX_Z, m.PLY_THICKNESS)
     assembly_parts = [PartType.BOTTOM, PartType.LONG_SIDE, PartType.SHORT_SIDE]
-    assembly = assembler.assemble(assembly_parts)
-    # assembly = assembler.assemble()
+    # assembly = assembler.assemble(assembly_parts)
+    assembly = assembler.assemble()
     show_object(assembly, name="Garbage Sort Box Assembly")  # type: ignore
 
 

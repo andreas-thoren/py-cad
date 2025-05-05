@@ -1,12 +1,11 @@
-from collections.abc import Iterable
 import cadquery as cq
+from helpers.abstracts import AssemblerABC
 from projects.garbage_sort_box.parts import PartType, Builder
 
 
-class Assembler:
-    """To update/add parts, modify the `parts_data` property."""
-
+class Assembler(AssemblerABC):
     PartTypeEnum = PartType
+    BuilderClass = Builder
 
     # pylint: disable=too-many-arguments, too-many-positional-arguments
     def __init__(
@@ -17,11 +16,7 @@ class Assembler:
         material_thickness: int | float,
         visual_offset: int = 0,
     ):
-        self.builder = Builder()
-        self._x_length = width
-        self._y_length = depth
-        self._z_length = height
-        self._material_thickness = material_thickness
+        super().__init__(width, depth, height, material_thickness)
         self.visual_offset = visual_offset
 
     @property
@@ -37,7 +32,7 @@ class Assembler:
         return self._z_length / 2
 
     @property
-    def metadata_map(self) -> dict[PartTypeEnum, dict]:
+    def metadata_map(self) -> dict[PartType, dict]:
         # pylint: disable=no-value-for-parameter
         return {
             PartType.BOTTOM: {
@@ -66,26 +61,3 @@ class Assembler:
                 "color": cq.Color("burlywood4"),
             },
         }
-
-    def get_assembly_data(
-        self, assembly_parts: Iterable[PartTypeEnum]
-    ) -> list[tuple[cq.Workplane, dict]]:
-
-        assembly_data = []
-        metadata_map = self.metadata_map
-        for part in assembly_parts:
-            try:
-                metadata = metadata_map[part]
-            except KeyError as exc:
-                raise ValueError(f"Invalid part type: {part}") from exc
-
-            cq_workplane = self.builder.build_part(part)
-            assembly_data.append((cq_workplane, metadata))
-        return assembly_data
-
-    def assemble(self, assembly_parts: Iterable[PartTypeEnum] | None = None) -> cq.Assembly:
-        assembly_parts = assembly_parts or tuple(self.PartTypeEnum)
-        assembly = cq.Assembly()
-        for part, metadata in self.get_assembly_data(assembly_parts):
-            assembly.add(part, **metadata)
-        return assembly
