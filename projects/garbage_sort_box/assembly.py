@@ -1,80 +1,69 @@
-from collections.abc import Hashable
-from enum import Enum, auto
 import cadquery as cq
 import projects.garbage_sort_box.measurements as m
-from projects.garbage_sort_box import parts
-from helpers.assembler import assembler_factory
+from projects.garbage_sort_box.parts import PartType, Builder
 
 
-# Optional enum to easily reference part types in show_objects.py
-class PartType(Enum):
-    BOTTOM = auto()
-    LONG_SIDE = auto()
-    LONG_SIDE_INVERSE = auto()
-    SHORT_SIDE = auto()
-    SHORT_SIDE_INVERSE = auto()
+class Assembler:
+    """To update/add parts, modify the `parts_data` property."""
 
+    z_offset = m.BOX_Z / 2
 
-# pylint: disable=no-value-for-parameter
-# Define parts_data according to the assembler_factory function signature
-parts_data: tuple[tuple[Hashable, cq.Workplane, dict]] = (
-    (
-        PartType.BOTTOM,
-        parts.bottom,
-        {
-            "name": "Bottom Panel",
-            "color": cq.Color("burlywood"),
-        },
-    ),
-    (
-        PartType.LONG_SIDE,
-        parts.long_side,
-        {
-            "name": "Long side panel",
-            "color": cq.Color("burlywood2"),
-            "loc": lambda ass: cq.Location((0, ass.y_offset, ass.z_offset)),
-        },
-    ),
-    (
-        PartType.LONG_SIDE_INVERSE,
-        parts.long_side_inverse,
-        {
-            "name": "Long side panel inverse",
-            "color": cq.Color("burlywood2"),
-            "loc": lambda ass: cq.Location((0, -ass.y_offset, ass.z_offset)),
-        },
-    ),
-    (
-        PartType.SHORT_SIDE,
-        parts.short_side,
-        {
-            "name": "Short side panel",
-            "color": cq.Color("burlywood4"),
-            "loc": lambda ass: cq.Location((ass.x_offset, 0, ass.z_offset)),
-        },
-    ),
-    (
-        PartType.SHORT_SIDE_INVERSE,
-        parts.short_side,
-        {
-            "name": "Short side panel inverse",
-            "color": cq.Color("burlywood4"),
-            "loc": lambda ass: cq.Location((-ass.x_offset, 0, ass.z_offset)),
-        },
-    ),
-)
+    @property
+    def x_offset(self):
+        return ((m.BOX_X - m.PLY_THICKNESS) / 2) + self.visual_offset
 
-# Create the Assembler class using the assembler_factory function
-Assembler = assembler_factory(
-    parts_data=parts_data,
-    cls_attributes={
-        "z_offset": m.BOX_Z / 2,
-        "x_offset": property(
-            lambda self: ((m.BOX_X - m.PLY_THICKNESS) / 2) + self.visual_offset
-        ),
-        "y_offset": property(
-            lambda self: ((m.BOX_Y - m.PLY_THICKNESS) / 2) + self.visual_offset
-        ),
-    },
-    inst_attributes={"visual_offset": 0},
-)
+    @property
+    def y_offset(self):
+        return ((m.BOX_Y - m.PLY_THICKNESS) / 2) + self.visual_offset
+
+    def __init__(self, parts: list[PartType] | None = None, visual_offset: int = 0):
+        self.parts = parts or list(PartType)
+        self.visual_offset = visual_offset
+        self.builder = Builder()
+
+    @property
+    def assembly_data(self):
+        # pylint: disable=no-value-for-parameter
+        metadata_map = {
+            PartType.BOTTOM: {
+                "name": "Bottom Panel",
+                "color": cq.Color("burlywood"),
+            },
+            PartType.LONG_SIDE: {
+                "loc": cq.Location(cq.Vector((0, self.y_offset, self.z_offset))),
+                "name": "Long side panel",
+                "color": cq.Color("burlywood2"),
+            },
+            PartType.LONG_SIDE_INVERSE: {
+                "loc": cq.Location(cq.Vector((0, -self.y_offset, self.z_offset))),
+                "name": "Long side panel inverse",
+                "color": cq.Color("burlywood2"),
+            },
+            PartType.SHORT_SIDE: {
+                "loc": cq.Location(cq.Vector((self.x_offset, 0, self.z_offset))),
+                "name": "Short side panel",
+                "color": cq.Color("burlywood4"),
+            },
+            PartType.SHORT_SIDE_INVERSE: {
+                "loc": cq.Location(cq.Vector((-self.x_offset, 0, self.z_offset))),
+                "name": "Short side panel inverse",
+                "color": cq.Color("burlywood4"),
+            },
+        }
+
+        assembly_data = []
+        for part in self.parts:
+            try:
+                metadata = metadata_map[part]
+            except KeyError as exc:
+                raise ValueError(f"Invalid part type: {part}") from exc
+
+            cq_workplane = self.builder.build_part(part)
+            assembly_data.append((cq_workplane, metadata))
+        return assembly_data
+
+    def assemble(self):
+        assembly = cq.Assembly()
+        for part, metadata in self.assembly_data:
+            assembly.add(part, **metadata)
+        return assembly
