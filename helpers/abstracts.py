@@ -63,20 +63,20 @@ class AssemblerABC(DimensionMixin, ABC):
     Subclasses must implement the following:
 
     1. Define the following class attributes:
-    - PartTypeEnum: An Enum class containing all part types.
-    - BuilderClass: A concrete Builder class that inherits from BuilderABC.
+    - _PartTypeEnum: An Enum class containing all part types.
+    - _BuilderClass: A concrete Builder class that inherits from BuilderABC.
 
     2. If additional instance variables are needed, implement a custom __init__ method.
        The custom __init__ must call super().__init__() with width, depth, height
        and material_thickness.
 
     3. Implement the metadata_map property.
-       It must return a dictionary mapping part types (PartTypeEnum members)
+       It must return a dictionary mapping part types (_PartTypeEnum members)
        to metadata dictionaries containing kwargs for the cq.Assembly.add method.
     """
 
-    PartTypeEnum: type[Enum]
-    BuilderClass: type[BuilderABC]
+    _PartTypeEnum: type[Enum]
+    _BuilderClass: type[BuilderABC]
 
     def __init__(
         self,
@@ -97,7 +97,7 @@ class AssemblerABC(DimensionMixin, ABC):
                 to thicknesses.
         """
         super().__init__(width, depth, height, material_thickness)
-        self._builder = self.BuilderClass()
+        self._builder = self._BuilderClass()
 
     @property
     @abstractmethod
@@ -115,7 +115,7 @@ class AssemblerABC(DimensionMixin, ABC):
         Build parts and collect their metadata.
 
         Args:
-            assembly_parts (Iterable[PartTypeEnum]): Iterable of part types
+            assembly_parts (Iterable[_PartTypeEnum]): Iterable of part types
                 to include in the assembly.
 
         Returns:
@@ -135,7 +135,7 @@ class AssemblerABC(DimensionMixin, ABC):
         return assembly_data
 
     def assemble(self, assembly_parts: Iterable[Enum] | None = None) -> cq.Assembly:
-        assembly_parts = assembly_parts or tuple(self.PartTypeEnum)
+        assembly_parts = assembly_parts or tuple(self._PartTypeEnum)
         assembly = cq.Assembly()
         for part, metadata in self._get_assembly_data(assembly_parts):
             assembly.add(part, **metadata)

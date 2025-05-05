@@ -4,8 +4,8 @@ from projects.garbage_sort_box.parts import PartType, Builder
 
 
 class Assembler(AssemblerABC):
-    PartTypeEnum = PartType
-    BuilderClass = Builder
+    _PartTypeEnum = PartType
+    _BuilderClass = Builder
 
     # pylint: disable=too-many-arguments, too-many-positional-arguments
     def __init__(
