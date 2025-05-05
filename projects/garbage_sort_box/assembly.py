@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 import cadquery as cq
 import projects.garbage_sort_box.measurements as m
 from projects.garbage_sort_box.parts import PartType, Builder
@@ -6,6 +7,7 @@ from projects.garbage_sort_box.parts import PartType, Builder
 class Assembler:
     """To update/add parts, modify the `parts_data` property."""
 
+    PartEnum = PartType
     z_offset = m.BOX_Z / 2
 
     @property
@@ -16,43 +18,48 @@ class Assembler:
     def y_offset(self):
         return ((m.BOX_Y - m.PLY_THICKNESS) / 2) + self.visual_offset
 
-    def __init__(self, parts: list[PartType] | None = None, visual_offset: int = 0):
-        self.parts = parts or list(PartType)
+    def __init__(self, visual_offset: int = 0):
         self.visual_offset = visual_offset
         self.builder = Builder()
 
     @property
-    def assembly_data(self):
+    def metadata_map(self) -> dict[PartEnum, dict]:
         # pylint: disable=no-value-for-parameter
-        metadata_map = {
+        return {
             PartType.BOTTOM: {
+                "loc": cq.Location(cq.Vector(0, 0, 0)),
                 "name": "Bottom Panel",
                 "color": cq.Color("burlywood"),
             },
             PartType.LONG_SIDE: {
-                "loc": cq.Location(cq.Vector((0, self.y_offset, self.z_offset))),
+                "loc": cq.Location(cq.Vector(0, self.y_offset, self.z_offset)),
                 "name": "Long side panel",
                 "color": cq.Color("burlywood2"),
             },
             PartType.LONG_SIDE_INVERSE: {
-                "loc": cq.Location(cq.Vector((0, -self.y_offset, self.z_offset))),
+                "loc": cq.Location(cq.Vector(0, -self.y_offset, self.z_offset)),
                 "name": "Long side panel inverse",
                 "color": cq.Color("burlywood2"),
             },
             PartType.SHORT_SIDE: {
-                "loc": cq.Location(cq.Vector((self.x_offset, 0, self.z_offset))),
+                "loc": cq.Location(cq.Vector(self.x_offset, 0, self.z_offset)),
                 "name": "Short side panel",
                 "color": cq.Color("burlywood4"),
             },
             PartType.SHORT_SIDE_INVERSE: {
-                "loc": cq.Location(cq.Vector((-self.x_offset, 0, self.z_offset))),
+                "loc": cq.Location(cq.Vector(-self.x_offset, 0, self.z_offset)),
                 "name": "Short side panel inverse",
                 "color": cq.Color("burlywood4"),
             },
         }
 
+    def get_assembly_data(
+        self, assembly_parts: Iterable[PartEnum]
+    ) -> list[tuple[cq.Workplane, dict]]:
+
         assembly_data = []
-        for part in self.parts:
+        metadata_map = self.metadata_map
+        for part in assembly_parts:
             try:
                 metadata = metadata_map[part]
             except KeyError as exc:
@@ -62,8 +69,9 @@ class Assembler:
             assembly_data.append((cq_workplane, metadata))
         return assembly_data
 
-    def assemble(self):
+    def assemble(self, assembly_parts: Iterable[PartEnum] | None = None) -> cq.Assembly:
+        assembly_parts = assembly_parts or tuple(self.PartEnum)
         assembly = cq.Assembly()
-        for part, metadata in self.assembly_data:
+        for part, metadata in self.get_assembly_data(assembly_parts):
             assembly.add(part, **metadata)
         return assembly
