@@ -1,9 +1,15 @@
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from enum import Enum
 import cadquery as cq
 
+class BuilderABC(ABC):
+    @abstractmethod
+    def build_part(self, part_type: Enum) -> cq.Workplane:
+        """Build a part based on the given part type."""
+
 class AssemblerABC(ABC):
-    PartEnum: Enum
+    PartTypeEnum: type[Enum]
 
     @abstractmethod
     def __init__(
@@ -21,17 +27,9 @@ class AssemblerABC(ABC):
         pass
 
     @property
-    def width(self):
-        return self._x_length
-    
-    @property
     @abstractmethod
     def _y_length(self):
         pass
-
-    @property
-    def depth(self):
-        return self._y_length
 
     @property
     @abstractmethod
@@ -39,16 +37,38 @@ class AssemblerABC(ABC):
         pass
 
     @property
+    @abstractmethod
+    def _material_thickness(self):
+        pass
+
+    @property
+    @abstractmethod
+    def builder(self) -> BuilderABC:
+        pass
+
+    @property
+    @abstractmethod
+    def metadata_map(self) -> dict[type[Enum], dict]:
+        pass
+
+    @property
+    def width(self):
+        return self._x_length
+
+    @property
+    def depth(self):
+        return self._y_length
+
+    @property
     def height(self):
         return self._z_length / 2
 
     @property
-    @abstractmethod
-    def metadata_map(self) -> dict[PartEnum, dict]:
-        pass
+    def material_thickness(self):
+        return self._material_thickness
 
     def get_assembly_data(
-        self, assembly_parts: Iterable[PartEnum]
+        self, assembly_parts: Iterable[type[Enum]]
     ) -> list[tuple[cq.Workplane, dict]]:
 
         assembly_data = []
@@ -63,8 +83,10 @@ class AssemblerABC(ABC):
             assembly_data.append((cq_workplane, metadata))
         return assembly_data
 
-    def assemble(self, assembly_parts: Iterable[PartEnum] | None = None) -> cq.Assembly:
-        assembly_parts = assembly_parts or tuple(self.PartEnum)
+    def assemble(
+        self, assembly_parts: Iterable[type[Enum]] | None = None
+    ) -> cq.Assembly:
+        assembly_parts = assembly_parts or tuple(self.PartTypeEnum)
         assembly = cq.Assembly()
         for part, metadata in self.get_assembly_data(assembly_parts):
             assembly.add(part, **metadata)

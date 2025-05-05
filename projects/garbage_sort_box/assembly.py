@@ -6,7 +6,7 @@ from projects.garbage_sort_box.parts import PartType, Builder
 class Assembler:
     """To update/add parts, modify the `parts_data` property."""
 
-    PartEnum = PartType
+    PartTypeEnum = PartType
 
     # pylint: disable=too-many-arguments, too-many-positional-arguments
     def __init__(
@@ -37,7 +37,7 @@ class Assembler:
         return self._z_length / 2
 
     @property
-    def metadata_map(self) -> dict[PartEnum, dict]:
+    def metadata_map(self) -> dict[PartTypeEnum, dict]:
         # pylint: disable=no-value-for-parameter
         return {
             PartType.BOTTOM: {
@@ -68,7 +68,7 @@ class Assembler:
         }
 
     def get_assembly_data(
-        self, assembly_parts: Iterable[PartEnum]
+        self, assembly_parts: Iterable[PartTypeEnum]
     ) -> list[tuple[cq.Workplane, dict]]:
 
         assembly_data = []
@@ -83,8 +83,8 @@ class Assembler:
             assembly_data.append((cq_workplane, metadata))
         return assembly_data
 
-    def assemble(self, assembly_parts: Iterable[PartEnum] | None = None) -> cq.Assembly:
-        assembly_parts = assembly_parts or tuple(self.PartEnum)
+    def assemble(self, assembly_parts: Iterable[PartTypeEnum] | None = None) -> cq.Assembly:
+        assembly_parts = assembly_parts or tuple(self.PartTypeEnum)
         assembly = cq.Assembly()
         for part, metadata in self.get_assembly_data(assembly_parts):
             assembly.add(part, **metadata)
