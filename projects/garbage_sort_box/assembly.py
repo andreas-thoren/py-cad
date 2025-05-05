@@ -1,6 +1,5 @@
 from collections.abc import Iterable
 import cadquery as cq
-import projects.garbage_sort_box.measurements as m
 from projects.garbage_sort_box.parts import PartType, Builder
 
 
@@ -8,19 +7,34 @@ class Assembler:
     """To update/add parts, modify the `parts_data` property."""
 
     PartEnum = PartType
-    z_offset = m.BOX_Z / 2
+
+    # pylint: disable=too-many-arguments, too-many-positional-arguments
+    def __init__(
+        self,
+        width: int | float,
+        depth: int | float,
+        height: int | float,
+        material_thickness: int | float,
+        visual_offset: int = 0,
+    ):
+        self.builder = Builder()
+        self._x_length = width
+        self._y_length = depth
+        self._z_length = height
+        self._material_thickness = material_thickness
+        self.visual_offset = visual_offset
 
     @property
     def x_offset(self):
-        return ((m.BOX_X - m.PLY_THICKNESS) / 2) + self.visual_offset
+        return ((self._x_length - self._material_thickness) / 2) + self.visual_offset
 
     @property
     def y_offset(self):
-        return ((m.BOX_Y - m.PLY_THICKNESS) / 2) + self.visual_offset
+        return ((self._y_length - self._material_thickness) / 2) + self.visual_offset
 
-    def __init__(self, visual_offset: int = 0):
-        self.visual_offset = visual_offset
-        self.builder = Builder()
+    @property
+    def z_offset(self):
+        return self._z_length / 2
 
     @property
     def metadata_map(self) -> dict[PartEnum, dict]:
