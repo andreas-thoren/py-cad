@@ -1,9 +1,11 @@
+from helpers.models import DimensionData
 
 def show_garbage_sort_box():
     import projects.garbage_sort_box.measurements as m
     from projects.garbage_sort_box.assembly import Assembler, PartType
 
-    assembler = Assembler(m.BOX_X, m.BOX_Y, m.BOX_Z, m.PLY_THICKNESS)
+    dimension_data = DimensionData(m.BOX_X, m.BOX_Y, m.BOX_Z, m.PLY_THICKNESS)
+    assembler = Assembler(dimension_data)
     assembly_parts = [PartType.BOTTOM, PartType.LONG_SIDE, PartType.SHORT_SIDE]
     assembly = assembler.assemble(assembly_parts)
     # assembly = assembler.assemble()

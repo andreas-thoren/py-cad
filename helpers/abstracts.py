@@ -34,32 +34,21 @@ class AssemblerABC(DimensionDataMixin, ABC):
 
     def __init__(
         self,
-        width: int | float,
-        depth: int | float,
-        height: int | float,
-        material_thickness: int | float | dict[str, int | float],
+        dimension_data: DimensionData,
     ):
         """
         Initialize base assembler dimensions and builder.
 
         Args:
-            width (int | float): Total width of the assembly.
-            depth (int | float): Total depth of the assembly.
-            height (int | float): Total height of the assembly.
-            material_thickness (int | float | dict[str, int | float]):
-                Thickness of the material used, or a mapping of material names
-                to thicknesses.
+            dimension_data (DimensionData): DimensionData instance containing
+                the dimensions of the assembly.
         """
-        super().__init__(width, depth, height, material_thickness)
-        self._builder = self._BuilderClass()
+        self._dimension_data = dimension_data
+        self.builder = self._BuilderClass()
 
     @abstractmethod
     def get_metadata_map(self) -> dict[Enum, dict]:
         pass
-
-    @property
-    def builder(self) -> BuilderABC:
-        return self._builder
 
     def _get_assembly_data(
         self, assembly_parts: Iterable[Enum]

@@ -1,5 +1,6 @@
 import cadquery as cq
 from helpers.abstracts import AssemblerABC
+from helpers.models import DimensionData
 from projects.garbage_sort_box.parts import PartType, Builder
 
 
@@ -10,26 +11,23 @@ class Assembler(AssemblerABC):
     # pylint: disable=too-many-arguments, too-many-positional-arguments
     def __init__(
         self,
-        width: int | float,
-        depth: int | float,
-        height: int | float,
-        material_thickness: int | float,
+        dimension_data: DimensionData,
         visual_offset: int = 0,
     ):
-        super().__init__(width, depth, height, material_thickness)
+        super().__init__(dimension_data)
         self.visual_offset = visual_offset
 
     @property
     def x_offset(self):
-        return ((self._x_length - self._material_thickness) / 2) + self.visual_offset
+        return ((self.x_length - self.material_thickness) / 2) + self.visual_offset
 
     @property
     def y_offset(self):
-        return ((self._y_length - self._material_thickness) / 2) + self.visual_offset
+        return ((self.y_length - self.material_thickness) / 2) + self.visual_offset
 
     @property
     def z_offset(self):
-        return self._z_length / 2
+        return self.z_length / 2
 
     def get_metadata_map(self) -> dict[PartType, dict]:
         # pylint: disable=no-value-for-parameter
