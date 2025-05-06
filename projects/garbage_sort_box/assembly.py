@@ -31,8 +31,7 @@ class Assembler(AssemblerABC):
     def z_offset(self):
         return self._z_length / 2
 
-    @property
-    def metadata_map(self) -> dict[PartType, dict]:
+    def get_metadata_map(self) -> dict[PartType, dict]:
         # pylint: disable=no-value-for-parameter
         return {
             PartType.BOTTOM: {

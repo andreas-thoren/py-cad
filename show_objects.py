@@ -12,7 +12,7 @@ def show_garbage_sort_box():
 
 def show_generic_box():
     from projects.generic_box import generic_box
-    show_object(generic_box, name="Generic box")  # type: ignore
+    # show_object(generic_box, name="Generic box")  # type: ignore
 
 
 show_garbage_sort_box()
