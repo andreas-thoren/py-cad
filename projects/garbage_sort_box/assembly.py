@@ -1,6 +1,5 @@
 import cadquery as cq
-from helpers.abstracts import AssemblerABC
-from helpers.models import DimensionData
+from helpers.models import AssemblerABC, DimensionData
 from projects.garbage_sort_box.parts import PartType, Builder
 
 

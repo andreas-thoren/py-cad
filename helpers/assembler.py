@@ -3,6 +3,7 @@ from typing import Protocol, Any, Type
 from dataclasses import dataclass
 import cadquery as cq
 
+# TODO Delete this after refactoring generic box
 
 @dataclass
 class Part:
