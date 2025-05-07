@@ -14,19 +14,9 @@ class Assembler(AssemblerABC):
         visual_offset: int = 0,
     ):
         super().__init__(dimension_data)
-        self.visual_offset = visual_offset
-
-    @property
-    def x_offset(self):
-        return ((self.x_length - self.material_thickness) / 2) + self.visual_offset
-
-    @property
-    def y_offset(self):
-        return ((self.y_length - self.material_thickness) / 2) + self.visual_offset
-
-    @property
-    def z_offset(self):
-        return self.z_length / 2
+        self.x_offset = visual_offset + (self.x_length - self.material_thickness) / 2
+        self.y_offset = visual_offset + (self.y_length - self.material_thickness) / 2
+        self.z_offset = self.z_length / 2
 
     def get_metadata_map(self) -> dict[PartType, dict]:
         # pylint: disable=no-value-for-parameter
