@@ -1,4 +1,5 @@
 from enum import Enum, auto
+from functools import cached_property
 import cadquery as cq
 from helpers.models import BuilderABC, DimensionData
 
@@ -12,16 +13,18 @@ class PartType(Enum):
 
 
 class Builder(BuilderABC):
-    _part_type_func_map = {
-        PartType.BOTTOM: lambda self: self.get_bottom_panel(),
-        PartType.LONG_SIDE: lambda self: self.get_long_side_panel(),
-        PartType.LONG_SIDE_INVERSE: lambda self: self.get_long_side_panel(True),
-        PartType.SHORT_SIDE: lambda self: self.get_short_side_panel(),
-        PartType.SHORT_SIDE_INVERSE: lambda self: self.get_short_side_panel(),
-    }
-
     top_divider_y = 300
     top_divider_z = 300
+
+    @cached_property
+    def _part_build_map(self) -> dict[PartType, tuple[callable, tuple, dict]]:
+        return {
+            PartType.BOTTOM: (self.get_bottom_panel, (), {}),
+            PartType.LONG_SIDE: (self.get_long_side_panel, (), {}),
+            PartType.LONG_SIDE_INVERSE: (self.get_long_side_panel, (True,), {}),
+            PartType.SHORT_SIDE: (self.get_short_side_panel, (), {}),
+            PartType.SHORT_SIDE_INVERSE: (self.get_short_side_panel, (), {}),
+        }
 
     def __init__(self, dimension_data: DimensionData):
         super().__init__(dimension_data)
@@ -55,7 +58,9 @@ class Builder(BuilderABC):
     def get_bottom_panel(self) -> cq.Workplane:
         return (
             cq.Workplane("XY")
-            .box(self.x_length, self.y_length, self.material_thickness - self.route_depth)
+            .box(
+                self.x_length, self.y_length, self.material_thickness - self.route_depth
+            )
             .faces(">Z")
             .workplane()
             .rect(
@@ -66,11 +71,16 @@ class Builder(BuilderABC):
         )
 
     def get_short_side_panel(self) -> cq.Workplane:
-        return cq.Workplane("YZ").box(self.panel_y, self.panel_z, self.material_thickness)
+        return cq.Workplane("YZ").box(
+            self.panel_y, self.panel_z, self.material_thickness
+        )
 
     def build_part(self, part_type: PartType) -> cq.Workplane:
-        if part_type not in PartType:
-            raise ValueError(f"Invalid part type: {part_type}")
-
-        part_func = self._part_type_func_map[part_type]
-        return part_func(self)
+        try:
+            func, args, kwargs = self._part_build_map[part_type]
+        except KeyError as exc:
+            raise ValueError(
+                f"Invalid part type: {part_type}. "
+                f"Available parts: {list(self._part_build_map.keys())}"
+            ) from exc
+        return func(*args, **kwargs)
