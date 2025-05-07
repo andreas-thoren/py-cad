@@ -16,6 +16,7 @@ class DimensionData:
 
 
 class DimensionDataMixin:
+    """Allows attribute access from subclasses directly to the DimensionData attributes"""
 
     @property
     def x_length(self):
@@ -66,22 +67,22 @@ class DimensionDataMixin:
 
 class BuilderABC(DimensionDataMixin, ABC):
     """
-    To be used as a base class for all BuilderClasses. Define concrete subclasses
-    in parts.py module inside project/template folder. The parts module should also
+    To be used as a base class for all Builder classes. Define concrete subclasses
+    in the parts.py module inside each project/template folder. The parts module should also
     define a PartType enum to be used both by the BuilderABC subclass and by the concrete
     AssemblerABC subclass in assembly.py.
 
     Builder subclasses must implement the following:
-    1. If calculated parts dimensions are needed define a custom init method that
-        accepts dimension_data (DimensionData) as its first argument and then
-        starts by calling super().__init__(dimension_data). Defining custom logic
-        below the super call allows leveraging the DimensionMixin to access
-        dimension_data for calculating part measurements.
-    2. Define methods for building the different parts (project specific):
-    3. Implement the _part_build_map property (preferably cached_property)
-        that should return a dict mapping PartType enum members to tuples with
-        (function, args, kwargs) so the build_part method in this ABC can build
-        the parts correctly.
+    1. If calculated part dimensions are needed, define a custom __init__ method that
+       accepts dimension_data (DimensionData) as its first argument. The custom __init__
+       must start by calling super().__init__(dimension_data). Defining custom logic
+       below the super call allows leveraging the DimensionDataMixin to access
+       dimension data for calculating part measurements.
+    2. Define methods for building the different parts (project-specific).
+    3. Implement the _part_build_map property (preferably using cached_property),
+       which should return a dict mapping PartType enum members to tuples with
+       (function, args, kwargs) so that the build_part method in this ABC can
+       build the parts correctly.
     """
 
     def __init__(self, dimension_data: DimensionData):
@@ -98,7 +99,10 @@ class BuilderABC(DimensionDataMixin, ABC):
         """
 
     def build_part(self, part_type: Enum) -> cq.Workplane:
-        """part_type should be a member of the enum defined in _PartTypeEnum"""
+        """
+        Given a part type (an Enum member), builds and returns the corresponding
+        cadquery Workplane object by invoking the registered build function.
+        """
         try:
             func, args, kwargs = self._part_build_map[part_type]
         except KeyError as exc:
@@ -115,16 +119,18 @@ class AssemblerABC(DimensionDataMixin, ABC):
     Subclasses must implement the following:
 
     1. Define the following class attributes:
-    - _PartTypeEnum: An Enum class containing all part types.
-    - _BuilderClass: A concrete Builder class that inherits from BuilderABC.
+       - _PartTypeEnum: An Enum class containing all part types.
+       - _BuilderClass: A concrete Builder class that inherits from BuilderABC.
+         (Note: although these attribute names begin with an underscore,
+         they must be explicitly defined in each subclass.)
 
     2. If additional instance variables are needed, implement a custom __init__ method.
-       The custom __init__ must call super().__init__() with width, depth, height
-       and material_thickness.
+       The __init__ method must accept dimension_data: DimensionData as its first argument,
+       and must call super().__init__(dimension_data) before adding custom logic.
 
     3. Implement the get_metadata_map method.
        It must return a dictionary mapping part types (_PartTypeEnum members)
-       to metadata dictionaries containing kwargs for the cq.Assembly.add method.
+       to metadata dictionaries containing keyword arguments for the cq.Assembly.add method.
     """
 
     _PartTypeEnum: type[Enum]
