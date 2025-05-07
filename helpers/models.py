@@ -48,14 +48,31 @@ class DimensionDataMixin:
         return material_thickness
 
 
-
 class BuilderABC(DimensionDataMixin, ABC):
+    _PartTypeEnum: type[Enum]
+
     def __init__(self, dimension_data: DimensionData):
         self._dimension_data = dimension_data
 
+    @property
     @abstractmethod
+    def _part_build_map(self) -> dict[Enum, tuple[callable, tuple, dict]]:
+        """
+        Should return a dict with members from _PartTypeEnum as keys and tuples
+        with the function to build the parts, args and kwargs for the build function.
+        Use cached_property from functools instead of plane property for speed.
+        """
+
     def build_part(self, part_type: Enum) -> cq.Workplane:
-        """Build a part based on the given part type."""
+        """part_type should be a member of the enum defined in _PartTypeEnum"""
+        try:
+            func, args, kwargs = self._part_build_map[part_type]
+        except KeyError as exc:
+            raise ValueError(
+                f"Invalid part type: {part_type}. "
+                f"Available parts: {list(self._part_build_map.keys())}"
+            ) from exc
+        return func(*args, **kwargs)
 
 
 class AssemblerABC(DimensionDataMixin, ABC):

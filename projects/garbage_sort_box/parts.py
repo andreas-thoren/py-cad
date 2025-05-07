@@ -74,13 +74,3 @@ class Builder(BuilderABC):
         return cq.Workplane("YZ").box(
             self.panel_y, self.panel_z, self.material_thickness
         )
-
-    def build_part(self, part_type: PartType) -> cq.Workplane:
-        try:
-            func, args, kwargs = self._part_build_map[part_type]
-        except KeyError as exc:
-            raise ValueError(
-                f"Invalid part type: {part_type}. "
-                f"Available parts: {list(self._part_build_map.keys())}"
-            ) from exc
-        return func(*args, **kwargs)
