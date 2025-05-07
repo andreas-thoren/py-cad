@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from enum import Enum
 import cadquery as cq
@@ -7,6 +7,8 @@ import cadquery as cq
 
 @dataclass
 class DimensionData:
+    """Can be subclassed for projects that need more dimension variables"""
+
     x_length: int | float
     y_length: int | float
     z_length: int | float
@@ -47,20 +49,52 @@ class DimensionDataMixin:
                 ) from exc
         return material_thickness
 
+    def __getattr__(self, name):
+        """
+        Delegate attribute access to self._dimension_data if the attribute
+        does not exist on self. Only called if normal attribute lookup fails.
+        If the attribute is missing on _dimension_data too, raise a clean AttributeError
+        that mentions the outer class (self), not _dimension_data.
+        """
+        try:
+            return getattr(self._dimension_data, name)
+        except AttributeError:
+            raise AttributeError(
+                f"'{self.__class__.__name__}' object has no attribute '{name}'"
+            ) from None
+
 
 class BuilderABC(DimensionDataMixin, ABC):
-    _PartTypeEnum: type[Enum]
+    """
+    To be used as a base class for all BuilderClasses. Define concrete subclasses
+    in parts.py module inside project/template folder. The parts module should also
+    define a PartType enum to be used both by the BuilderABC subclass and by the concrete
+    AssemblerABC subclass in assembly.py.
+
+    Builder subclasses must implement the following:
+    1. If calculated parts dimensions are needed define a custom init method that
+        accepts dimension_data (DimensionData) as its first argument and then
+        starts by calling super().__init__(dimension_data). Defining custom logic
+        below the super call allows leveraging the DimensionMixin to access
+        dimension_data for calculating part measurements.
+    2. Define methods for building the different parts (project specific):
+    3. Implement the _part_build_map property (preferably cached_property)
+        that should return a dict mapping PartType enum members to tuples with
+        (function, args, kwargs) so the build_part method in this ABC can build
+        the parts correctly.
+    """
 
     def __init__(self, dimension_data: DimensionData):
         self._dimension_data = dimension_data
 
     @property
     @abstractmethod
-    def _part_build_map(self) -> dict[Enum, tuple[callable, tuple, dict]]:
+    def _part_build_map(self) -> dict[Enum, tuple[Callable, tuple, dict]]:
         """
-        Should return a dict with members from _PartTypeEnum as keys and tuples
-        with the function to build the parts, args and kwargs for the build function.
-        Use cached_property from functools instead of plane property for speed.
+        Should return a dict with members from a _PartTypeEnum (see AssemblerABC)
+        as keys and values defined as tuples with the function to build the parts,
+        args and kwargs for the build function.
+        Use cached_property from functools instead of plain property for speed.
         """
 
     def build_part(self, part_type: Enum) -> cq.Workplane:

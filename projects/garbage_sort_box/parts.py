@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from enum import Enum, auto
 from functools import cached_property
 import cadquery as cq
@@ -17,7 +18,7 @@ class Builder(BuilderABC):
     top_divider_z = 300
 
     @cached_property
-    def _part_build_map(self) -> dict[PartType, tuple[callable, tuple, dict]]:
+    def _part_build_map(self) -> dict[PartType, tuple[Callable, tuple, dict]]:
         return {
             PartType.BOTTOM: (self.get_bottom_panel, (), {}),
             PartType.LONG_SIDE: (self.get_long_side_panel, (), {}),
