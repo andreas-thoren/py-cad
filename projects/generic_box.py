@@ -1,11 +1,9 @@
-from primitives.basic_box import get_assembled_box
+from helpers.models import DimensionData
 
-width = 300
-depth = 150
-height = 200
-thickness = 125
-offset = 0
+# Project dimensions
+BOX_X = 300
+BOX_Y = 200
+BOX_Z = 200
+PLY_THICKNESS = 9
 
-generic_box = get_assembled_box(
-    width=width, depth=depth, height=height, thickness=thickness, visual_offset=offset
-)
+BOX_DIMENSIONS = DimensionData(BOX_X, BOX_Y, BOX_Z, PLY_THICKNESS)

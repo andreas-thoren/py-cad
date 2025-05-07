@@ -1,15 +1,19 @@
-from collections.abc import Hashable
+from collections.abc import Iterable
 import cadquery as cq
-from .assembly import get_assembler
+from helpers.models import DimensionData
+from .assembly import Assembler
+from .parts import Builder, PartType
 
 
-def get_assembled_box(width, depth, height, thickness, visual_offset=0) -> cq.Assembly:
-    AssemblerClass = get_assembler(
-        x_len=width, y_len=depth, z_len=height, thickness=thickness
-    )
-    assembler = AssemblerClass(visual_offset=visual_offset)
-    return assembler.assemble()
+def get_assembled_box(
+    box_dimensions: DimensionData,
+    assembly_parts: Iterable[PartType] | None = None,
+    visual_offset=0,
+) -> cq.Assembly:
+    assembler = Assembler(box_dimensions, visual_offset)
+    return assembler.assemble(assembly_parts=assembly_parts)
 
 
-def get_box_parts(width, depth, height, thickness) -> dict[Hashable, cq.Workplane]:
-    pass
+def get_box_part(box_dimensions: DimensionData, part_type: PartType) -> cq.Workplane:
+    builder = Builder(box_dimensions)
+    return builder.build_part(part_type)
