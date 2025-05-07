@@ -10,20 +10,20 @@ def show_garbage_sort_box():
 
 
 def show_generic_box():
-    from primitives.basic_box.factory import get_assembled_box, PartType
+    from primitives.basic_box.assembly import Assembler, PartType
     from projects.generic_box import BOX_DIMENSIONS
 
     # part_types = [PartType.BOTTOM, PartType.LONG_SIDE]
     part_types = list(PartType)
-    assembly = get_assembled_box(BOX_DIMENSIONS, part_types)
+    assembly = Assembler.get_assembly(BOX_DIMENSIONS, assembly_parts=part_types)
     show_object(assembly, name="Generic box")  # type: ignore
 
 def show_generic_box_part():
-    from primitives.basic_box.factory import get_box_part, PartType
+    from primitives.basic_box.parts import Builder, PartType
     from projects.generic_box import BOX_DIMENSIONS
 
-    part_type = PartType.BOTTOM
-    part = get_box_part(BOX_DIMENSIONS, part_type)
+    part_type = PartType.LONG_SIDE_INVERSE
+    part = Builder.get_part(BOX_DIMENSIONS, part_type)
     show_object(part, name=part_type.name.replace("_", " ").capitalize())
 
 

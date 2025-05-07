@@ -1,4 +1,4 @@
-from .factory import get_assembled_box, get_box_part
-from .parts import PartType
+from .assembly import Assembler
+from .parts import Builder, PartType
 
-__all__ = ["get_assembled_box", "get_box_part", "PartType"]
+__all__ = ["Assembler", "Builder", "PartType"]

@@ -112,6 +112,30 @@ class BuilderABC(DimensionDataMixin, ABC):
             ) from exc
         return func(*args, **kwargs)
 
+    @classmethod
+    def get_part(
+        cls,
+        dimension_data: DimensionData,
+        part_type: Enum,
+        *builder_args,
+        **builder_kwargs,
+    ) -> cq.Workplane:
+        """
+        Convenience method to build a single part directly without manually instantiating
+        a Builder instance.
+
+        Args:
+            dimension_data (DimensionData): The dimension data for the builder.
+            part_type (Enum): The part type to build.
+            *builder_args: Positional arguments forwarded to the Builder constructor.
+            **builder_kwargs: Keyword arguments forwarded to the Builder constructor.
+
+        Returns:
+            cadquery.Workplane: The built part as a Workplane object.
+        """
+        builder = cls(dimension_data, *builder_args, **builder_kwargs)
+        return builder.build_part(part_type)
+
 
 class AssemblerABC(DimensionDataMixin, ABC):
     """
@@ -186,3 +210,27 @@ class AssemblerABC(DimensionDataMixin, ABC):
         for part, metadata in self._get_assembly_data(assembly_parts):
             assembly.add(part, **metadata)
         return assembly
+
+    @classmethod
+    def get_assembly(
+        cls,
+        dimension_data: DimensionData,
+        *assembler_args,
+        assembly_parts: Iterable[Enum] | None = None,
+        **assembler_kwargs,
+    ) -> cq.Assembly:
+        """
+        Convenience method to create an assembly directly without manually instantiating
+        an Assembler instance.
+
+        Args:
+            dimension_data (DimensionData): The dimension data for the assembly.
+            *assembler_args: Positional arguments forwarded to the Assembler constructor.
+            assembly_parts (Iterable[Enum], optional): Parts to include. Defaults to all parts.
+            **assembler_kwargs: Keyword arguments forwarded to the Assembler constructor.
+
+        Returns:
+            cadquery.Assembly: The assembled cadquery Assembly object.
+        """
+        assembler = cls(dimension_data, *assembler_args, **assembler_kwargs)
+        return assembler.assemble(assembly_parts=assembly_parts)
