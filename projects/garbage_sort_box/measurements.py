@@ -1,18 +1,9 @@
-# Project dimensions
-PLY_THICKNESS = 9
-ROUTE_DEPTH = PLY_THICKNESS / 2
+from helpers.models import DimensionData
 
-# Box dimensions
+# Project dimensions
 BOX_X = 490
 BOX_Y = 350
 BOX_Z = 540
+PLY_THICKNESS = 9
 
-# Divider dimensions
-TOP_DIVIDER_X = BOX_Y - PLY_THICKNESS
-TOP_DIVIDER_Y = 300
-TOP_DIVIDER_Z = 300
-
-# Calculated dimensions
-OFFSET = PLY_THICKNESS - ROUTE_DEPTH
-PANEL_Y = BOX_Y - 2*OFFSET
-PANEL_Z = BOX_Z - OFFSET
+DIMENSION_DATA = DimensionData(BOX_X, BOX_Y, BOX_Z, PLY_THICKNESS)

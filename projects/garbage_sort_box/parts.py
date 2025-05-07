@@ -1,6 +1,6 @@
 from enum import Enum, auto
 import cadquery as cq
-import projects.garbage_sort_box.measurements as m
+from helpers.models import BuilderABC, DimensionData
 
 
 class PartType(Enum):
@@ -11,7 +11,7 @@ class PartType(Enum):
     SHORT_SIDE_INVERSE = auto()
 
 
-class Builder:
+class Builder(BuilderABC):
     _part_type_func_map = {
         PartType.BOTTOM: lambda self: self.get_bottom_panel(),
         PartType.LONG_SIDE: lambda self: self.get_long_side_panel(),
@@ -20,39 +20,53 @@ class Builder:
         PartType.SHORT_SIDE_INVERSE: lambda self: self.get_short_side_panel(),
     }
 
+    top_divider_y = 300
+    top_divider_z = 300
+
+    def __init__(self, dimension_data: DimensionData):
+        super().__init__(dimension_data)
+        # Calculated dimensions
+        self.top_divider_x = self.x_length - self.material_thickness
+        self.route_depth = self.material_thickness / 2
+        self.offset = self.material_thickness - self.route_depth
+        self.panel_y = self.y_length - 2 * self.offset
+        self.panel_z = self.z_length - self.offset
+
     def get_long_side_panel(self, invert_grooves=False) -> cq.Workplane:
-        groove_offset = m.BOX_X / 2 - m.PLY_THICKNESS / 2
+        groove_offset = self.x_length / 2 - self.material_thickness / 2
         groove_face = ">Y" if invert_grooves else "<Y"
         divider_width = 50
 
         return (
             cq.Workplane("XZ")
-            .box(m.BOX_X, m.PANEL_Z, m.PLY_THICKNESS)
+            .box(self.x_length, self.panel_z, self.material_thickness)
             .faces(groove_face)
             .workplane()
             .pushPoints([(groove_offset, 0), (-groove_offset, 0)])
-            .rect(m.PLY_THICKNESS, m.PANEL_Z)
-            .cutBlind(-m.ROUTE_DEPTH)
+            .rect(self.material_thickness, self.panel_z)
+            .cutBlind(-self.route_depth)
             .faces(groove_face)
             .workplane()
-            .moveTo(0, (m.PANEL_Z - divider_width) / 2)
-            .rect(m.PLY_THICKNESS, divider_width)
-            .cutBlind(-m.ROUTE_DEPTH)
+            .moveTo(0, (self.panel_z - divider_width) / 2)
+            .rect(self.material_thickness, divider_width)
+            .cutBlind(-self.route_depth)
         )
 
     def get_bottom_panel(self) -> cq.Workplane:
         return (
             cq.Workplane("XY")
-            .box(m.BOX_X, m.BOX_Y, m.PLY_THICKNESS - m.ROUTE_DEPTH)
+            .box(self.x_length, self.y_length, self.material_thickness - self.route_depth)
             .faces(">Z")
             .workplane()
-            .rect(m.BOX_X - m.PLY_THICKNESS * 2, m.BOX_Y - m.PLY_THICKNESS * 2)
-            .extrude(m.ROUTE_DEPTH)
+            .rect(
+                self.x_length - self.material_thickness * 2,
+                self.y_length - self.material_thickness * 2,
+            )
+            .extrude(self.route_depth)
         )
 
     def get_short_side_panel(self) -> cq.Workplane:
-        return cq.Workplane("YZ").box(m.PANEL_Y, m.PANEL_Z, m.PLY_THICKNESS)
-
+        return cq.Workplane("YZ").box(self.panel_y, self.panel_z, self.material_thickness)
 
     def build_part(self, part_type: PartType) -> cq.Workplane:
         if part_type not in PartType:

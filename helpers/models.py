@@ -7,9 +7,9 @@ import cadquery as cq
 
 @dataclass
 class DimensionData:
-    width: int | float
-    depth: int | float
-    height: int | float
+    x_length: int | float
+    y_length: int | float
+    z_length: int | float
     material_thickness: int | float | dict[Enum, int | float]
 
 
@@ -17,27 +17,15 @@ class DimensionDataMixin:
 
     @property
     def x_length(self):
-        return self._dimension_data.width
-
-    @property
-    def width(self):
-        return self._dimension_data.width
+        return self._dimension_data.x_length
 
     @property
     def y_length(self):
-        return self._dimension_data.depth
-
-    @property
-    def depth(self):
-        return self._dimension_data.depth
+        return self._dimension_data.y_length
 
     @property
     def z_length(self):
-        return self._dimension_data.height
-
-    @property
-    def height(self):
-        return self._dimension_data.height
+        return self._dimension_data.z_length
 
     @property
     def material_thickness(self):
@@ -62,6 +50,9 @@ class DimensionDataMixin:
 
 
 class BuilderABC(DimensionDataMixin, ABC):
+    def __init__(self, dimension_data: DimensionData):
+        self._dimension_data = dimension_data
+
     @abstractmethod
     def build_part(self, part_type: Enum) -> cq.Workplane:
         """Build a part based on the given part type."""
@@ -100,7 +91,7 @@ class AssemblerABC(DimensionDataMixin, ABC):
                 the dimensions of the assembly.
         """
         self._dimension_data = dimension_data
-        self.builder = self._BuilderClass()
+        self.builder = self._BuilderClass(dimension_data)
 
     @abstractmethod
     def get_metadata_map(self) -> dict[Enum, dict]:
