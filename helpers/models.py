@@ -69,7 +69,7 @@ class BuilderABC(DimensionDataMixin, ABC):
     """
     To be used as a base class for all Builder classes. Define concrete subclasses
     in the parts.py module inside each project/template folder. The parts module should also
-    define a PartType enum to be used both by the BuilderABC subclass and by the concrete
+    define a Part enum to be used both by the BuilderABC subclass and by the concrete
     AssemblerABC subclass in assembly.py.
 
     Builder subclasses must implement the following:
@@ -80,22 +80,22 @@ class BuilderABC(DimensionDataMixin, ABC):
        dimension data for calculating part measurements.
     2. Define methods for building the different parts (project-specific).
     3. Builder subclasses must implement methods to build parts and register them
-       using BuilderABC.register(PartType.member1, PartType.member2, ...)
+       using BuilderABC.register(Part.member1, Part.member2, ...)
     """
 
-    _PartTypeEnum: type[Enum]
+    _PartEnum: type[Enum]
     _part_map: dict[Enum, Callable]
 
     @property
-    def PartTypeEnum(self) -> type[Enum]:  # pylint: disable=invalid-name
-        return self._PartTypeEnum
+    def PartEnum(self) -> type[Enum]:  # pylint: disable=invalid-name
+        return self._PartEnum
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
 
-        if not hasattr(cls, "_PartTypeEnum") or not issubclass(cls._PartTypeEnum, Enum):
+        if not hasattr(cls, "_PartEnum") or not issubclass(cls._PartEnum, Enum):
             raise TypeError(
-                f"{cls.__name__} must define _PartTypeEnum as an Enum subclass."
+                f"{cls.__name__} must define _PartEnum as an Enum subclass."
             )
 
         # Automatically create empty part map
@@ -109,7 +109,7 @@ class BuilderABC(DimensionDataMixin, ABC):
 
         # Safety check: ensure all Enum members are mapped
         missing_parts = [
-            member for member in cls._PartTypeEnum if member not in cls._part_map
+            member for member in cls._PartEnum if member not in cls._part_map
         ]
         if missing_parts:
             raise ValueError(f"{cls.__name__}._part_map missing parts: {missing_parts}")
@@ -199,7 +199,7 @@ class AssemblerABC(DimensionDataMixin, ABC):
        and must call super().__init__(dimension_data) before adding custom logic.
 
     3. Implement the get_metadata_map method.
-       It must return a dictionary mapping part types (builder.PartTypeEnum members)
+       It must return a dictionary mapping part types (builder.PartEnum members)
        to metadata dictionaries containing keyword arguments for the cq.Assembly.add method.
     """
 
@@ -250,7 +250,7 @@ class AssemblerABC(DimensionDataMixin, ABC):
         return assembly_data
 
     def assemble(self, assembly_parts: Iterable[Enum] | None = None) -> cq.Assembly:
-        assembly_parts = assembly_parts or tuple(self.builder.PartTypeEnum)
+        assembly_parts = assembly_parts or tuple(self.builder.PartEnum)
         assembly = cq.Assembly()
         for part, metadata in self._get_assembly_data(assembly_parts):
             assembly.add(part, **metadata)

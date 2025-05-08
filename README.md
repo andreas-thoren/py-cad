@@ -6,15 +6,15 @@ Repository containing my CadQuery sketches and designs, primarily intended for w
 
 Follow these steps to start a new concrete CadQuery project in this repository. Each project will clearly follow this structure to maintain consistency and ease of development.
 
-### Step 1: Define a `PartType` Enum
+### Step 1: Define a `Part` Enum
 
-Create a new directory for your project under the `projects/` folder. Inside this folder, create `parts.py` and define your `PartType` enum clearly:
+Create a new directory for your project under the `projects/` folder. Inside this folder, create `parts.py` and define your `Part` enum clearly:
 
 ```python
 # projects/<your_project>/parts.py
 from enum import Enum, auto
 
-class PartType(Enum):
+class Part(Enum):
     BOTTOM = auto()
     SIDE_PANEL = auto()
     TOP_PANEL = auto()
@@ -77,8 +77,8 @@ class MyProjectBuilder(BuilderABC):
     @cached_property
     def _part_build_map(self): # This property needs to be defined on all subclasses
         return {
-            PartType.BOTTOM: (self.build_bottom, (), {}),
-            PartType.SIDE_PANEL: (self.build_side_panel, (), {}),
+            Part.BOTTOM: (self.build_bottom, (), {}),
+            Part.SIDE_PANEL: (self.build_side_panel, (), {}),
         }
 
     def build_bottom(self):
@@ -96,7 +96,7 @@ Subclass `AssemblerABC` in `assembly.py` to handle part placement and assembly l
 # projects/<your_project>/assembly.py
 from helpers.models import AssemblerABC
 import cadquery as cq
-from .parts import PartType, MyProjectBuilder
+from .parts import Part, MyProjectBuilder
 
 class MyProjectAssembler(AssemblerABC):
 
@@ -108,11 +108,11 @@ class MyProjectAssembler(AssemblerABC):
 
     def get_metadata_map(self): # This method needs to be defined on all subclasses.
         return {
-            PartType.BOTTOM: {
+            Part.BOTTOM: {
                 "loc": cq.Location((0, 0, 0)),
                 "color": cq.Color("tan"),
             },
-            PartType.SIDE_PANEL: {
+            Part.SIDE_PANEL: {
                 "loc": cq.Location((self.x_length / 2, 0, self.z_length / 2)),
                 "color": cq.Color("brown"),
             },
@@ -129,10 +129,10 @@ You can easily visualize parts and entire assemblies using CadQuery's `show_obje
 import cadquery as cq
 from projects.<your_project>.measurements import DIMENSION_DATA
 from projects.<your_project>.assembly import MyProjectAssembler
-from projects.<your_project>.parts import MyProjectBuilder, PartType
+from projects.<your_project>.parts import MyProjectBuilder, Part
 
 # Visualize a single part
-part = MyProjectBuilder.get_part(DIMENSION_DATA, PartType.BOTTOM)
+part = MyProjectBuilder.get_part(DIMENSION_DATA, Part.BOTTOM)
 show_object(part, name="Bottom Part")
 
 # Visualize the entire assembly
