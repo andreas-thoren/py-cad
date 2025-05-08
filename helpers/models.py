@@ -83,36 +83,38 @@ class BuilderABC(DimensionDataMixin, ABC):
        using BuilderABC.register(Part.member1, Part.member2, ...)
     """
 
-    _PartEnum: type[Enum]
-    _part_map: dict[Enum, Callable]
+    _PartTypeEnum: type[Enum] # Must be set by subclasses
+    _builder_map: dict[Enum, Callable] # Auto created in __init_subclass__
 
     @property
-    def PartEnum(self) -> type[Enum]:  # pylint: disable=invalid-name
-        return self._PartEnum
+    def PartTypeEnum(self) -> type[Enum]:  # pylint: disable=invalid-name
+        return self._PartTypeEnum
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
 
-        if not hasattr(cls, "_PartEnum") or not issubclass(cls._PartEnum, Enum):
+        if not hasattr(cls, "_PartTypeEnum") or not issubclass(cls._PartTypeEnum, Enum):
             raise TypeError(
-                f"{cls.__name__} must define _PartEnum as an Enum subclass."
+                f"{cls.__name__} must define _PartTypeEnum as an Enum subclass."
             )
 
         # Automatically create empty part map
-        cls._part_map = {}
+        cls._builder_map = {}
 
         # Scan the class for methods with registered parts
         for attr in cls.__dict__.values():
-            if callable(attr) and hasattr(attr, "_registered_part_types"):
-                for part_type in attr._registered_part_types:
-                    cls._part_map[part_type] = attr
+            if callable(attr) and hasattr(attr, "_registered_part_type"):
+                part_type = attr._registered_part_type
+                cls._builder_map[part_type] = attr
 
         # Safety check: ensure all Enum members are mapped
         missing_parts = [
-            member for member in cls._PartEnum if member not in cls._part_map
+            member for member in cls._PartTypeEnum if member not in cls._builder_map
         ]
         if missing_parts:
-            raise ValueError(f"{cls.__name__}._part_map missing parts: {missing_parts}")
+            raise ValueError(
+                f"{cls.__name__}._builder_map missing parts: {missing_parts}"
+            )
 
     def __init__(self, dimension_data: DimensionData):
         self._dimension_data = dimension_data
@@ -129,11 +131,11 @@ class BuilderABC(DimensionDataMixin, ABC):
         If cached_solid is True, returns a Solid object (cached for performance).
         """
         try:
-            build_func = self._part_map[part_type]
+            build_func = self._builder_map[part_type]
         except KeyError as exc:
             raise ValueError(
                 f"Invalid part type: {part_type}. "
-                f"Available parts: {list(self._part_map.keys())}"
+                f"Available parts: {list(self._builder_map.keys())}"
             ) from exc
 
         if cached_solid:
@@ -173,12 +175,10 @@ class BuilderABC(DimensionDataMixin, ABC):
         return builder.build_part(part_type)
 
     @staticmethod
-    def register(*part_types: Enum) -> Callable:
+    def register(part_type: Enum) -> Callable:
         def decorator(func):
-            # Defer attaching into _part_map until __init_subclass__
-            if not hasattr(func, "_registered_part_types"):
-                func._registered_part_types = set()
-            func._registered_part_types.update(part_types)
+            # Defer attaching into _builder_map until __init_subclass__
+            func._registered_part_type = part_type
             return func
 
         return decorator
@@ -199,11 +199,60 @@ class AssemblerABC(DimensionDataMixin, ABC):
        and must call super().__init__(dimension_data) before adding custom logic.
 
     3. Implement the get_metadata_map method.
-       It must return a dictionary mapping part types (builder.PartEnum members)
+       It must return a dictionary mapping part types (builder.PartTypeEnum members)
        to metadata dictionaries containing keyword arguments for the cq.Assembly.add method.
     """
 
-    _BuilderClass: type[BuilderABC]
+    _BuilderClass: type[BuilderABC] # Subclasses need to assign this.
+    _PartEnum: type[Enum] # Subclasses need to assign this.
+    _part_type_map: dict[Enum, Enum] # Subclasses need to assign this.
+
+    @property
+    def PartEnum(self) -> type[Enum]:  # pylint: disable=invalid-name
+        return self._PartEnum
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+
+        # Validate cls._BuilderClass
+        if not hasattr(cls, "_BuilderClass"):
+            raise TypeError(f"{cls.__name__} must define _BuilderClass.")
+        if not issubclass(cls._BuilderClass, BuilderABC):
+            raise TypeError(
+                f"{cls.__name__}._BuilderClass must inherit from BuilderABC."
+            )
+
+        # Validate cls._PartEnum
+        if not hasattr(cls, "_PartEnum"):
+            raise TypeError(f"{cls.__name__} must define _PartEnum.")
+        if not issubclass(cls._PartEnum, Enum):
+            raise TypeError(f"{cls.__name__}._PartEnum must be an Enum.")
+
+        # Validate cls._part_type_map data structure
+        if not hasattr(cls, "_part_type_map"):
+            raise TypeError(f"{cls.__name__} must define _part_type_map.")
+        if not isinstance(cls._part_type_map, dict):
+            raise TypeError(f"{cls.__name__}._part_type_map must be a dictionary.")
+
+        # Validate keys of cls._part_type_map
+        actual_keys = set(cls._part_type_map.keys())
+        expected_keys = set(cls._PartEnum)
+        if actual_keys != expected_keys:
+            raise ValueError(
+                f"Incomplete/Erroneous mapping of cls._PartEnum:\n"
+                f"Expected the following PartEnum keys:\n{expected_keys}\n"
+                f"Got the following keys:\n{actual_keys}"
+            )
+
+        # Validate values of cls._part_type_map
+        actual_values = set(cls._part_type_map.values())
+        allowed_values = set(cls._BuilderClass._PartTypeEnum)
+        non_part_type_values = actual_values - allowed_values
+        if non_part_type_values:
+            raise ValueError(
+                f"Only allowed to map to the following part types:\n{allowed_values}\n" 
+                f"Got the following 'forbidden' part types:\n{non_part_type_values}"
+            )
 
     def __init__(
         self,
@@ -230,7 +279,7 @@ class AssemblerABC(DimensionDataMixin, ABC):
         Build parts and collect their metadata.
 
         Args:
-            assembly_parts (Iterable[Enum]): Iterable of part types
+            assembly_parts (Iterable[Enum]): Iterable of part (PartEnum members)
                 to include in the assembly.
 
         Returns:
@@ -245,15 +294,16 @@ class AssemblerABC(DimensionDataMixin, ABC):
             except KeyError as exc:
                 raise ValueError(f"Invalid part type: {part}") from exc
 
-            cq_workplane = self.builder.build_part(part, cached_solid=True)
-            assembly_data.append((cq_workplane, metadata))
+            part_type = self._part_type_map[part]
+            cq_solid = self.builder.build_part(part_type, cached_solid=True)
+            assembly_data.append((cq_solid, metadata))
         return assembly_data
 
     def assemble(self, assembly_parts: Iterable[Enum] | None = None) -> cq.Assembly:
-        assembly_parts = assembly_parts or tuple(self.builder.PartEnum)
+        assembly_parts = assembly_parts or tuple(self.PartEnum)
         assembly = cq.Assembly()
-        for part, metadata in self._get_assembly_data(assembly_parts):
-            assembly.add(part, **metadata)
+        for cq_solid, metadata in self._get_assembly_data(assembly_parts):
+            assembly.add(cq_solid, **metadata)
         return assembly
 
     @classmethod
@@ -271,7 +321,7 @@ class AssemblerABC(DimensionDataMixin, ABC):
         Args:
             dimension_data (DimensionData): The dimension data for the assembly.
             *assembler_args: Positional arguments forwarded to the Assembler constructor.
-            assembly_parts (Iterable[Enum], optional): Parts to include. Defaults to all parts.
+            assembly_parts (Iterable[Enum], optional): Parts (members of self.PartEnum) to include. Defaults to all parts.
             **assembler_kwargs: Keyword arguments forwarded to the Assembler constructor.
 
         Returns:

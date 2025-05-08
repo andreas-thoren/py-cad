@@ -1,10 +1,13 @@
 import cadquery as cq
 from helpers.models import AssemblerABC, DimensionData
-from projects.garbage_sort_box.parts import Part, Builder
+from .parts import Builder
+from .project_data import Part, PART_TYPE_MAP
 
 
 class Assembler(AssemblerABC):
     _BuilderClass = Builder
+    _PartEnum = Part
+    _part_type_map = PART_TYPE_MAP.copy()
 
     # pylint: disable=too-many-arguments, too-many-positional-arguments
     def __init__(

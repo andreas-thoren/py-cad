@@ -1,4 +1,5 @@
+from .parts import Builder
 from .assembly import Assembler
-from .parts import Builder, Part
+from .project_data import Part, PartType
 
-__all__ = ["Assembler", "Builder", "Part"]
+__all__ = ["Assembler", "Builder", "Part", "PartType"]
