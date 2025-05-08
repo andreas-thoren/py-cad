@@ -116,11 +116,17 @@ class BuilderABC(DimensionDataMixin, ABC):
 
     def __init__(self, dimension_data: DimensionData):
         self._dimension_data = dimension_data
+        self._solid_cache = {}
 
-    def build_part(self, part_type: Enum) -> cq.Workplane:
+    def build_part(
+        self, part_type: Enum, cached_solid: bool = False
+    ) -> cq.Workplane | cq.Solid:
         """
         Given a part type (an Enum member), builds and returns the corresponding
-        cadquery Workplane object by invoking the registered build function.
+        cadquery object.
+
+        If cached_solid is False (default), returns a Workplane object.
+        If cached_solid is True, returns a Solid object (cached for performance).
         """
         try:
             build_func = self._part_map[part_type]
@@ -129,7 +135,18 @@ class BuilderABC(DimensionDataMixin, ABC):
                 f"Invalid part type: {part_type}. "
                 f"Available parts: {list(self._part_map.keys())}"
             ) from exc
+
+        if cached_solid:
+            func_name = build_func.__name__
+            if not func_name in self._solid_cache:
+                self._solid_cache[func_name] = build_func(self).val()
+            return self._solid_cache[func_name]
+
         return build_func(self)
+
+    def clear_cache(self) -> None:
+        """Clear the solid cache if needed."""
+        self._solid_cache.clear()
 
     @classmethod
     def get_part(
@@ -228,7 +245,7 @@ class AssemblerABC(DimensionDataMixin, ABC):
             except KeyError as exc:
                 raise ValueError(f"Invalid part type: {part}") from exc
 
-            cq_workplane = self.builder.build_part(part)
+            cq_workplane = self.builder.build_part(part, cached_solid=True)
             assembly_data.append((cq_workplane, metadata))
         return assembly_data
 
