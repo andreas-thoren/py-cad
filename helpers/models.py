@@ -79,24 +79,41 @@ class BuilderABC(DimensionDataMixin, ABC):
        below the super call allows leveraging the DimensionDataMixin to access
        dimension data for calculating part measurements.
     2. Define methods for building the different parts (project-specific).
-    3. Implement the _part_build_map property (preferably using cached_property),
+    3. Implement the _part_map property (preferably using cached_property),
        which should return a dict mapping PartType enum members to tuples with
        (function, args, kwargs) so that the build_part method in this ABC can
        build the parts correctly.
     """
 
+    _PartTypeEnum: type[Enum]
+    _part_map: dict
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+
+        # 1. Check _PartTypeEnum exists and is a subclass of Enum
+        if not hasattr(cls, "_PartTypeEnum"):
+            raise TypeError(f"{cls.__name__} must define _PartTypeEnum.")
+        if not issubclass(cls._PartTypeEnum, Enum):
+            raise TypeError(f"{cls.__name__}._PartTypeEnum must be an Enum subclass.")
+
+        # 2. Check _part_map exists and is a dictionary
+        if not hasattr(cls, "_part_map"):
+            raise TypeError(f"{cls.__name__} must define _part_map.")
+        if not isinstance(cls._part_map, dict):
+            raise TypeError(f"{cls.__name__}._part_map must be a dict.")
+
+        # 3. Check that all Enum members are present as keys
+        missing_parts = [
+            member for member in cls._PartTypeEnum if member not in cls._part_map
+        ]
+        if missing_parts:
+            raise ValueError(
+                f"{cls.__name__}._part_map is missing registrations for part types: {missing_parts}"
+            )
+
     def __init__(self, dimension_data: DimensionData):
         self._dimension_data = dimension_data
-
-    @property
-    @abstractmethod
-    def _part_build_map(self) -> dict[Enum, tuple[Callable, tuple, dict]]:
-        """
-        Should return a dict with members from a _PartTypeEnum (see AssemblerABC)
-        as keys and values defined as tuples with the function to build the parts,
-        args and kwargs for the build function.
-        Use cached_property from functools instead of plain property for speed.
-        """
 
     def build_part(self, part_type: Enum) -> cq.Workplane:
         """
@@ -104,13 +121,13 @@ class BuilderABC(DimensionDataMixin, ABC):
         cadquery Workplane object by invoking the registered build function.
         """
         try:
-            func, args, kwargs = self._part_build_map[part_type]
+            build_func = self._part_map[part_type]
         except KeyError as exc:
             raise ValueError(
                 f"Invalid part type: {part_type}. "
-                f"Available parts: {list(self._part_build_map.keys())}"
+                f"Available parts: {list(self._part_map.keys())}"
             ) from exc
-        return func(*args, **kwargs)
+        return build_func(self)
 
     @classmethod
     def get_part(
@@ -135,6 +152,15 @@ class BuilderABC(DimensionDataMixin, ABC):
         """
         builder = cls(dimension_data, *builder_args, **builder_kwargs)
         return builder.build_part(part_type)
+
+    @staticmethod
+    def register(part_map: dict, *part_types: Enum) -> Callable:
+        def wrapper(func):
+            for part_type in part_types:
+                part_map[part_type] = func
+            return func
+
+        return wrapper
 
 
 class AssemblerABC(DimensionDataMixin, ABC):
