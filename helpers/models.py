@@ -86,31 +86,30 @@ class BuilderABC(DimensionDataMixin, ABC):
     """
 
     _PartTypeEnum: type[Enum]
-    _part_map: dict
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
 
-        # 1. Check _PartTypeEnum exists and is a subclass of Enum
-        if not hasattr(cls, "_PartTypeEnum"):
-            raise TypeError(f"{cls.__name__} must define _PartTypeEnum.")
-        if not issubclass(cls._PartTypeEnum, Enum):
-            raise TypeError(f"{cls.__name__}._PartTypeEnum must be an Enum subclass.")
+        if not hasattr(cls, "_PartTypeEnum") or not issubclass(cls._PartTypeEnum, Enum):
+            raise TypeError(
+                f"{cls.__name__} must define _PartTypeEnum as an Enum subclass."
+            )
 
-        # 2. Check _part_map exists and is a dictionary
-        if not hasattr(cls, "_part_map"):
-            raise TypeError(f"{cls.__name__} must define _part_map.")
-        if not isinstance(cls._part_map, dict):
-            raise TypeError(f"{cls.__name__}._part_map must be a dict.")
+        # Automatically create empty part map
+        cls._part_map = {}
 
-        # 3. Check that all Enum members are present as keys
+        # Scan the class for methods with registered parts
+        for attr in cls.__dict__.values():
+            if callable(attr) and hasattr(attr, "_registered_part_types"):
+                for part_type in attr._registered_part_types:
+                    cls._part_map[part_type] = attr
+
+        # Safety check: ensure all Enum members are mapped
         missing_parts = [
             member for member in cls._PartTypeEnum if member not in cls._part_map
         ]
         if missing_parts:
-            raise ValueError(
-                f"{cls.__name__}._part_map is missing registrations for part types: {missing_parts}"
-            )
+            raise ValueError(f"{cls.__name__}._part_map missing parts: {missing_parts}")
 
     def __init__(self, dimension_data: DimensionData):
         self._dimension_data = dimension_data
@@ -154,13 +153,15 @@ class BuilderABC(DimensionDataMixin, ABC):
         return builder.build_part(part_type)
 
     @staticmethod
-    def register(part_map: dict, *part_types: Enum) -> Callable:
-        def wrapper(func):
-            for part_type in part_types:
-                part_map[part_type] = func
+    def register(*part_types: Enum) -> Callable:
+        def decorator(func):
+            # Defer attaching into _part_map until __init_subclass__
+            if not hasattr(func, "_registered_part_types"):
+                func._registered_part_types = set()
+            func._registered_part_types.update(part_types)
             return func
 
-        return wrapper
+        return decorator
 
 
 class AssemblerABC(DimensionDataMixin, ABC):
