@@ -19,30 +19,30 @@ class Assembler(AssemblerABC):
         self.z_offset = self.z_length / 2
 
     def get_metadata_map(self) -> dict[PartType, dict]:
-        # pylint: disable=no-value-for-parameter
+        # pylint: disable=no-value-for-parameter, too-many-function-args
         return {
             PartType.BOTTOM: {
-                "loc": cq.Location(cq.Vector(0, 0, 0)),
+                "loc": cq.Location((0, 0, 0)),
                 "name": "Bottom Panel",
                 "color": cq.Color("burlywood"),
             },
             PartType.LONG_SIDE: {
-                "loc": cq.Location(cq.Vector(0, self.y_offset, self.z_offset)),
+                "loc": cq.Location((0, self.y_offset, self.z_offset)),
                 "name": "Long side panel",
                 "color": cq.Color("burlywood2"),
             },
             PartType.LONG_SIDE_INVERSE: {
-                "loc": cq.Location(cq.Vector(0, -self.y_offset, self.z_offset)),
+                "loc": cq.Location((0, -self.y_offset, self.z_offset), (0, 0, 1), 180),
                 "name": "Long side panel inverse",
                 "color": cq.Color("burlywood2"),
             },
             PartType.SHORT_SIDE: {
-                "loc": cq.Location(cq.Vector(self.x_offset, 0, self.z_offset)),
+                "loc": cq.Location((self.x_offset, 0, self.z_offset)),
                 "name": "Short side panel",
                 "color": cq.Color("burlywood4"),
             },
             PartType.SHORT_SIDE_INVERSE: {
-                "loc": cq.Location(cq.Vector(-self.x_offset, 0, self.z_offset)),
+                "loc": cq.Location((-self.x_offset, 0, self.z_offset)),
                 "name": "Short side panel inverse",
                 "color": cq.Color("burlywood4"),
             },

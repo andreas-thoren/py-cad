@@ -33,7 +33,7 @@ class Assembler(AssemblerABC):
             },
             PartType.LONG_SIDE_INVERSE: {
                 "loc": cq.Location(
-                    (0, -self.y_offset, self.z_offset), (1, 0, 0), 180
+                    (0, -self.y_offset, self.z_offset), (0, 0, 1), 180
                 ),
                 "name": "Long side panel inverse",
                 "color": cq.Color("burlywood2"),
