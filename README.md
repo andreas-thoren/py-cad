@@ -100,7 +100,6 @@ from .parts import PartType, MyProjectBuilder
 
 class MyProjectAssembler(AssemblerABC):
 
-    _PartTypeEnum = PartType
     _BuilderClass = MyProjectBuilder
 
     def __init__(self, dimension_data):

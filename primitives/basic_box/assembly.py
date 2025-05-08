@@ -4,7 +4,6 @@ from .parts import PartType, Builder
 
 
 class Assembler(AssemblerABC):
-    _PartTypeEnum = PartType
     _BuilderClass = Builder
 
     # pylint: disable=too-many-arguments, too-many-positional-arguments

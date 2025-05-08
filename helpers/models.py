@@ -79,13 +79,16 @@ class BuilderABC(DimensionDataMixin, ABC):
        below the super call allows leveraging the DimensionDataMixin to access
        dimension data for calculating part measurements.
     2. Define methods for building the different parts (project-specific).
-    3. Implement the _part_map property (preferably using cached_property),
-       which should return a dict mapping PartType enum members to tuples with
-       (function, args, kwargs) so that the build_part method in this ABC can
-       build the parts correctly.
+    3. Builder subclasses must implement methods to build parts and register them
+       using BuilderABC.register(PartType.member1, PartType.member2, ...)
     """
 
     _PartTypeEnum: type[Enum]
+    _part_map: dict[Enum, Callable]
+
+    @property
+    def PartTypeEnum(self) -> type[Enum]:  # pylint: disable=invalid-name
+        return self._PartTypeEnum
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -170,7 +173,6 @@ class AssemblerABC(DimensionDataMixin, ABC):
     Subclasses must implement the following:
 
     1. Define the following class attributes:
-       - _PartTypeEnum: An Enum class containing all part types.
        - _BuilderClass: A concrete Builder class that inherits from BuilderABC.
          (Note: although these attribute names begin with an underscore,
          they must be explicitly defined in each subclass.)
@@ -180,11 +182,10 @@ class AssemblerABC(DimensionDataMixin, ABC):
        and must call super().__init__(dimension_data) before adding custom logic.
 
     3. Implement the get_metadata_map method.
-       It must return a dictionary mapping part types (_PartTypeEnum members)
+       It must return a dictionary mapping part types (builder.PartTypeEnum members)
        to metadata dictionaries containing keyword arguments for the cq.Assembly.add method.
     """
 
-    _PartTypeEnum: type[Enum]
     _BuilderClass: type[BuilderABC]
 
     def __init__(
@@ -212,7 +213,7 @@ class AssemblerABC(DimensionDataMixin, ABC):
         Build parts and collect their metadata.
 
         Args:
-            assembly_parts (Iterable[_PartTypeEnum]): Iterable of part types
+            assembly_parts (Iterable[Enum]): Iterable of part types
                 to include in the assembly.
 
         Returns:
@@ -232,7 +233,7 @@ class AssemblerABC(DimensionDataMixin, ABC):
         return assembly_data
 
     def assemble(self, assembly_parts: Iterable[Enum] | None = None) -> cq.Assembly:
-        assembly_parts = assembly_parts or tuple(self._PartTypeEnum)
+        assembly_parts = assembly_parts or tuple(self.builder.PartTypeEnum)
         assembly = cq.Assembly()
         for part, metadata in self._get_assembly_data(assembly_parts):
             assembly.add(part, **metadata)

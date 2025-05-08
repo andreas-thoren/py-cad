@@ -13,8 +13,8 @@ def show_generic_box():
     from primitives.basic_box.assembly import Assembler, PartType
     from projects.generic_box import BOX_DIMENSIONS
 
-    # part_types = [PartType.BOTTOM, PartType.LONG_SIDE_INVERSE, PartType.LONG_SIDE]
-    part_types = list(PartType)
+    part_types = [PartType.BOTTOM, PartType.LONG_SIDE_INVERSE, PartType.LONG_SIDE]
+    # part_types = list(PartType)
     assembly = Assembler.get_assembly(BOX_DIMENSIONS, assembly_parts=part_types)
     show_object(assembly, name="Generic box")  # type: ignore
 
