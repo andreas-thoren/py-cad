@@ -18,7 +18,8 @@ class Assembler(AssemblerABC):
         super().__init__(dimension_data)
         self.x_offset = visual_offset + (self.x_length - self.material_thickness) / 2
         self.y_offset = visual_offset + (self.y_length - self.material_thickness) / 2
-        self.z_offset = self.z_length / 2
+        self.z_offset = (self.z_length / 2) - (self.material_thickness - self.route_depth) / 2
+        self.top_offset = visual_offset + self.z_length - self.route_depth
 
     def get_metadata_map(self) -> dict[Part, dict]:
         # pylint: disable=no-value-for-parameter, too-many-function-args
@@ -49,5 +50,10 @@ class Assembler(AssemblerABC):
                 "loc": cq.Location((-self.x_offset, 0, self.z_offset)),
                 "name": "Short side panel inverse",
                 "color": cq.Color("burlywood4"),
+            },
+            Part.TOP: {
+                "loc": cq.Location((0, 0, self.top_offset), (1, 0, 0), 180),
+                "name": "Top Panel",
+                "color": cq.Color("burlywood"),
             },
         }

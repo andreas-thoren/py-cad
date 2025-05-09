@@ -1,9 +1,11 @@
 from helpers.models import DimensionData
+from primitives.plywood_box.project_data import BoxDimensionData
 
 # Project dimensions
 BOX_X = 300
 BOX_Y = 200
 BOX_Z = 200
 PLY_THICKNESS = 9
+ROUTE_DEPTH = PLY_THICKNESS / 2
 
-BOX_DIMENSIONS = DimensionData(BOX_X, BOX_Y, BOX_Z, PLY_THICKNESS)
+BOX_DIMENSIONS = BoxDimensionData(BOX_X, BOX_Y, BOX_Z, PLY_THICKNESS, ROUTE_DEPTH)

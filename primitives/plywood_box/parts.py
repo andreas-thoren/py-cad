@@ -13,10 +13,9 @@ class Builder(BuilderABC):
         super().__init__(dimension_data)
         # Calculated dimensions
         self.top_divider_x = self.x_length - self.material_thickness
-        self.route_depth = self.material_thickness / 2
         self.offset = self.material_thickness - self.route_depth
         self.panel_y = self.y_length - 2 * self.offset
-        self.panel_z = self.z_length - self.offset
+        self.panel_z = self.z_length - 2 * self.offset
 
     @BuilderABC.register(PartType.LONG_SIDE_PANEL)
     def get_long_side_panel(self, invert_grooves=False) -> cq.Workplane:
