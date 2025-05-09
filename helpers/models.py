@@ -83,8 +83,8 @@ class BuilderABC(DimensionDataMixin, ABC):
        using BuilderABC.register(Part.member1, Part.member2, ...)
     """
 
-    _PartTypeEnum: type[Enum] # Must be set by subclasses
-    _builder_map: dict[Enum, Callable] # Auto created in __init_subclass__
+    _PartTypeEnum: type[Enum]  # Must be set by subclasses
+    _builder_map: dict[Enum, Callable]  # Auto created in __init_subclass__
 
     @property
     def PartTypeEnum(self) -> type[Enum]:  # pylint: disable=invalid-name
@@ -203,9 +203,11 @@ class AssemblerABC(DimensionDataMixin, ABC):
        to metadata dictionaries containing keyword arguments for the cq.Assembly.add method.
     """
 
-    _BuilderClass: type[BuilderABC] # Subclasses need to assign this.
-    _PartEnum: type[Enum] # Subclasses need to assign this.
-    _part_type_map: dict[Enum, Enum] # Subclasses need to assign this.
+    _BuilderClass: type[BuilderABC]  # Subclasses need to assign this.
+    _PartEnum: type[Enum]  # Subclasses need to assign this.
+
+    # Subclasses must define if cls._PartEnum is not cls._BuilderClass._PartTypeEnum
+    _part_type_map: dict[Enum, Enum]
 
     @property
     def PartEnum(self) -> type[Enum]:  # pylint: disable=invalid-name
@@ -227,6 +229,15 @@ class AssemblerABC(DimensionDataMixin, ABC):
             raise TypeError(f"{cls.__name__} must define _PartEnum.")
         if not issubclass(cls._PartEnum, Enum):
             raise TypeError(f"{cls.__name__}._PartEnum must be an Enum.")
+
+        if cls._PartEnum is cls._BuilderClass._PartTypeEnum:
+            if hasattr(cls, "_part_type_map"):
+                raise ValueError(
+                    "No need to manually define '_part_type_map' when "
+                    f"{cls.__name__}._PartEnum is {cls._BuilderClass.__name__}._PartTypeEnum"
+                )
+            cls._part_type_map = {member: member for member in cls._PartEnum}
+            return  # Dont need to validate keys member below when assigned this way.
 
         # Validate cls._part_type_map data structure
         if not hasattr(cls, "_part_type_map"):
@@ -250,7 +261,7 @@ class AssemblerABC(DimensionDataMixin, ABC):
         non_part_type_values = actual_values - allowed_values
         if non_part_type_values:
             raise ValueError(
-                f"Only allowed to map to the following part types:\n{allowed_values}\n" 
+                f"Only allowed to map to the following part types:\n{allowed_values}\n"
                 f"Got the following 'forbidden' part types:\n{non_part_type_values}"
             )
 
