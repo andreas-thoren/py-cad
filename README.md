@@ -2,143 +2,156 @@
 
 Repository containing my CadQuery sketches and designs, primarily intended for woodworking and related projects.
 
+---
+
 ## Creating a New Project
 
-Follow these steps to start a new concrete CadQuery project in this repository. Each project will clearly follow this structure to maintain consistency and ease of development.
+Follow these steps to create a new CadQuery project using the shared model framework defined in `helpers/models.py`.
 
-### Step 1: Define a `Part` Enum
+Each project directory (e.g., `garbage_sort_box/`) typically contains:
 
-Create a new directory for your project under the `projects/` folder. Inside this folder, create `parts.py` and define your `Part` enum clearly:
+* `project_data.py` — dimensions, enums, and part mappings
+* `parts.py` — subclass of `BuilderABC` for generating parts
+* `assembly.py` — subclass of `AssemblerABC` for combining parts
+
+Typical project structure:
+```text
+your_project
+├── assembly.py
+├── parts.py
+├── project_data.py
+```
+
+---
+
+### Step 1: Define Part, PartType, and optionally PART_TYPE_MAP; create a DimensionData instance
+
+In `project_data.py`, define:
+
+* `Part` (Enum) — unique parts used in the final assembly (may include mirrored or variant instances)
+* `PartType` (Enum) — distinct shape templates needed to build those parts
+* `PART_TYPE_MAP` (dict[Part, PartType]) — Can be defined here or directly at the _part_type_map of the AssemblerABC subclass definition.
 
 ```python
-# projects/<your_project>/parts.py
 from enum import Enum, auto
+from helpers.models import DimensionData
 
 class Part(Enum):
     BOTTOM = auto()
+    LEFT_SIDE = auto()
+    RIGHT_SIDE = auto()
+
+class PartType(Enum):
+    BOTTOM = auto()
     SIDE_PANEL = auto()
-    TOP_PANEL = auto()
+
+PART_TYPE_MAP = {
+    Part.BOTTOM: PartType.BOTTOM,
+    Part.LEFT_SIDE: PartType.SIDE_PANEL,
+    Part.RIGHT_SIDE: PartType.SIDE_PANEL,
+}
+
+DIMENSION_DATA = DimensionData(x_length=400, y_length=300, z_length=250, material_thickness=12)
 ```
+For advanced customization, you may subclass `DimensionData` if extra dimension fields are needed.
 
-### Step 2: Decide on Dimension Data
+💡 If your project has a 1-to-1 mapping between `Part` and `PartType`, you may skip `PartType` and `PART_TYPE_MAP` and assign `Part` to both `_PartEnum` (AssemblerABC subclass) and `_PartTypeEnum` (BuilderABC subclass) in which case identity mapping is applied automatically by the assembler.
 
-In the same project directory, decide if the basic `DimensionData` class (from `helpers.models`) is sufficient, or if your project requires additional dimensions.
+---
 
-* **If basic dimensions (`x_length`, `y_length`, `z_length`, `material_thickness`) are enough**, simply create an instance of `DimensionData` directly:
+### Step 2: Define a Builder Subclass
+
+In `parts.py`, subclass `BuilderABC` and define one method per `PartType`. Register each build method using the `@BuilderABC.register(...)` decorator.
 
 ```python
-# projects/<your_project>/measurements.py
-from helpers.models import DimensionData
-
-DIMENSION_DATA = DimensionData(
-    x_length=400,
-    y_length=300,
-    z_length=200,
-    material_thickness=12
-)
-```
-
-* **If additional dimensions are required**, subclass `DimensionData`:
-
-```python
-# projects/<your_project>/measurements.py
-from helpers.models import DimensionData
-from dataclasses import dataclass
-
-@dataclass
-class MyProjectDimensions(DimensionData):
-    extra_clearance: float = 5.0
-
-DIMENSION_DATA = MyProjectDimensions(
-    x_length=400,
-    y_length=300,
-    z_length=200,
-    material_thickness=12,
-    extra_clearance=5.0
-)
-```
-
-### Step 3: Create Your Builder Class
-
-Subclass `BuilderABC` in your `parts.py`. Define methods to build each part:
-
-```python
-# projects/<your_project>/parts.py
-from functools import cached_property
-from helpers.models import BuilderABC
 import cadquery as cq
+from helpers.models import BuilderABC, DimensionData
+from .project_data import PartType
 
-class MyProjectBuilder(BuilderABC):
+class Builder(BuilderABC):
+    _PartTypeEnum = PartType
 
-    def __init__(self, dimension_data):
-        super().__init__(dimension_data) # Call super init first
-        # Additional instance variables like calculated dimensions can be defined here directly
+    def __init__(self, dimension_data: DimensionData):
+        super().__init__(dimension_data)
+        self.offset = self.material_thickness / 2
 
-    @cached_property
-    def _part_build_map(self): # This property needs to be defined on all subclasses
-        return {
-            Part.BOTTOM: (self.build_bottom, (), {}),
-            Part.SIDE_PANEL: (self.build_side_panel, (), {}),
-        }
-
-    def build_bottom(self):
+    @BuilderABC.register(PartType.BOTTOM)
+    def build_bottom(self) -> cq.Workplane:
         return cq.Workplane("XY").box(self.x_length, self.y_length, self.material_thickness)
 
-    def build_side_panel(self):
+    @BuilderABC.register(PartType.SIDE_PANEL)
+    def build_side_panel(self) -> cq.Workplane:
         return cq.Workplane("XZ").box(self.x_length, self.z_length, self.material_thickness)
 ```
 
-### Step 4: Create Your Assembler Class
+Thanks to `DimensionDataMixin`, you can access dimension values (`self.x_length`, `self.z_offset`, etc.), from the DimensionData instance directly in BuilderABC subclasses.
 
-Subclass `AssemblerABC` in `assembly.py` to handle part placement and assembly logic:
+---
+
+### Step 3: Define an Assembler Subclass
+
+In `assembly.py`, subclass `AssemblerABC`. Specify:
+
+* `_BuilderClass` — the builder class you just created
+* `_PartEnum` — your `Part` enum
+* `_part_type_map` — mapping from `Part` to `PartType` (omit if 1-to-1 mapping, see Step 1)
+
+You must also implement `get_metadata_map`, which controls placement and metadata of parts in the final assembly.
 
 ```python
-# projects/<your_project>/assembly.py
-from helpers.models import AssemblerABC
 import cadquery as cq
-from .parts import Part, MyProjectBuilder
+from helpers.models import AssemblerABC, DimensionData
+from .parts import Builder
+from .project_data import Part, PART_TYPE_MAP
 
-class MyProjectAssembler(AssemblerABC):
+class Assembler(AssemblerABC):
+    _BuilderClass = Builder
+    _PartEnum = Part
+    _part_type_map = PART_TYPE_MAP.copy()
 
-    _BuilderClass = MyProjectBuilder
+    def __init__(self, dimension_data: DimensionData):
+        super().__init__(dimension_data)
+        self.x_offset = self.x_length / 2
+        self.z_offset = self.z_length / 2
 
-    def __init__(self, dimension_data):
-        super().__init__(dimension_data) # Call super init first
-        # Additional instance variables like calculated offsets can be defined here directly
-
-    def get_metadata_map(self): # This method needs to be defined on all subclasses.
+    def get_metadata_map(self) -> dict[Part, dict]:
         return {
             Part.BOTTOM: {
                 "loc": cq.Location((0, 0, 0)),
                 "color": cq.Color("tan"),
             },
-            Part.SIDE_PANEL: {
-                "loc": cq.Location((self.x_length / 2, 0, self.z_length / 2)),
-                "color": cq.Color("brown"),
+            Part.LEFT_SIDE: {
+                "loc": cq.Location((-self.x_offset, 0, self.z_offset)),
+                "color": cq.Color("burlywood"),
+            },
+            Part.RIGHT_SIDE: {
+                "loc": cq.Location((self.x_offset, 0, self.z_offset)),
+                "color": cq.Color("burlywood"),
             },
         }
 ```
 
-Thanks to the `DimensionDataMixin`, you automatically gain direct access to all attributes defined in your `DimensionData` (and its subclasses) from within both your Builder and Assembler subclasses. For further detailed requirements of the Builder and Assembler subclasses, please consult their respective docstrings (`BuilderABC` and `AssemblerABC` in `helpers/models.py`).
+Thanks to `DimensionDataMixin`, you can access dimension values (`self.x_length`, `self.z_offset`, etc.), from the DimensionData instance directly in AssemblerABC subclasses.
 
-### Step 5: Visualize Parts and Assemblies with CadQuery
-You can easily visualize parts and entire assemblies using CadQuery's `show_object` function:
+---
+
+### Step 4: Visualize in CadQuery
+
+To preview your parts or the full assembly:
 
 ```python
-# Example visualization script
-import cadquery as cq
-from projects.<your_project>.measurements import DIMENSION_DATA
-from projects.<your_project>.assembly import MyProjectAssembler
-from projects.<your_project>.parts import MyProjectBuilder, Part
+from projects.my_box.project_data import DIMENSION_DATA
+from projects.my_box.parts import Builder, Part
+from projects.my_box.assembly import Assembler
 
-# Visualize a single part
-part = MyProjectBuilder.get_part(DIMENSION_DATA, Part.BOTTOM)
-show_object(part, name="Bottom Part")
+# Show a single part
+show_object(Builder.get_part(DIMENSION_DATA, Part.BOTTOM), name="Bottom")
 
-# Visualize the entire assembly
-assembly = MyProjectAssembler.get_assembly(DIMENSION_DATA)
-show_object(assembly, name="Full Assembly")
+# Show entire assembly
+show_object(Assembler.get_assembly(DIMENSION_DATA), name="Full Assembly")
 ```
+
+---
 
 ## Project Setup (Python Environment)
 
