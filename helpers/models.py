@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from enum import Enum
+import inspect
 import cadquery as cq
 
 
@@ -93,10 +94,10 @@ class BuilderABC(DimensionDataMixin, ABC):
         cls._builder_map = {}
 
         # Scan the class for methods with registered parts
-        for attr in cls.__dict__.values():
-            if callable(attr) and hasattr(attr, "_registered_part_type"):
-                part_type = attr._registered_part_type
-                cls._builder_map[part_type] = attr
+        for _, method in inspect.getmembers(cls, predicate=callable):
+            if hasattr(method, "_registered_part_type"):
+                part_type = method._registered_part_type
+                cls._builder_map[part_type] = method
 
         # Safety check: ensure all Enum members are mapped
         missing_parts = [
