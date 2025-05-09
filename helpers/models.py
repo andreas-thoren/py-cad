@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from enum import Enum
-import inspect
 import cadquery as cq
 
 
@@ -90,14 +89,18 @@ class BuilderABC(DimensionDataMixin, ABC):
                 f"{cls.__name__} must define _PartTypeEnum as an Enum subclass."
             )
 
-        # Automatically create empty part map
-        cls._builder_map = {}
+        # Make a copy of concrete parents _builder_map (if concrete parent exists)
+        parent_map = getattr(cls, "_builder_map", None)
+        if parent_map is not None and not isinstance(parent_map, dict):
+            raise TypeError(f"{cls.__name__}._builder_map must be a dict if defined.")
+        cls._builder_map = (parent_map or {}).copy()
+
 
         # Scan the class for methods with registered parts
-        for _, method in inspect.getmembers(cls, predicate=callable):
-            if hasattr(method, "_registered_part_type"):
-                part_type = method._registered_part_type
-                cls._builder_map[part_type] = method
+        for attr in cls.__dict__.values():
+            if callable(attr) and hasattr(attr, "_registered_part_type"):
+                part_type = attr._registered_part_type
+                cls._builder_map[part_type] = attr
 
         # Safety check: ensure all Enum members are mapped
         missing_parts = [
