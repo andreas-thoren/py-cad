@@ -7,7 +7,7 @@ import cadquery as cq
 
 @dataclass
 class DimensionData:
-    """Can be subclassed for projects that need more dimension variables"""
+    """Can be subclassed for projects that need more dimension variables."""
 
     x_length: int | float
     y_length: int | float
@@ -16,7 +16,7 @@ class DimensionData:
 
 
 class DimensionDataMixin:
-    """Allows attribute access from subclasses directly to the DimensionData attributes"""
+    """Allows attribute access from subclasses directly to the DimensionData attributes."""
 
     @property
     def x_length(self):
@@ -45,18 +45,13 @@ class DimensionDataMixin:
                 return material_thickness[part_type]
             except KeyError as exc:
                 raise ValueError(
-                    f"Material thickness for {part_type} not found in mapping:"
-                    f"\n{material_thickness}"
+                    f"Material thickness for {part_type} not found in mapping:\n"
+                    f"{material_thickness}"
                 ) from exc
         return material_thickness
 
     def __getattr__(self, name):
-        """
-        Delegate attribute access to self._dimension_data if the attribute
-        does not exist on self. Only called if normal attribute lookup fails.
-        If the attribute is missing on _dimension_data too, raise a clean AttributeError
-        that mentions the outer class (self), not _dimension_data.
-        """
+        """Delegate missing attributes to self._dimension_data."""
         try:
             return getattr(self._dimension_data, name)
         except AttributeError:
@@ -67,24 +62,20 @@ class DimensionDataMixin:
 
 class BuilderABC(DimensionDataMixin, ABC):
     """
-    To be used as a base class for all Builder classes. Define concrete subclasses
-    in the parts.py module inside each project/template folder. The parts module should also
-    define a Part enum to be used both by the BuilderABC subclass and by the concrete
-    AssemblerABC subclass in assembly.py.
+    Abstract base class for all Builder classes.
 
-    Builder subclasses must implement the following:
-    1. If calculated part dimensions are needed, define a custom __init__ method that
-       accepts dimension_data (DimensionData) as its first argument. The custom __init__
-       must start by calling super().__init__(dimension_data). Defining custom logic
-       below the super call allows leveraging the DimensionDataMixin to access
-       dimension data for calculating part measurements.
-    2. Define methods for building the different parts (project-specific).
-    3. Builder subclasses must implement methods to build parts and register them
-       using BuilderABC.register(Part.member1, Part.member2, ...)
+    Subclasses must:
+        1. Define cls._PartTypeEnum (an Enum).
+        2. Implement build methods for each part type.
+        3. Register each build method using @BuilderABC.register(part_type).
+
+    Custom __init__ methods (optional, for calculated dimensions etc) must:
+        1. Accept dimension_data (DimensionData) as its first argument.
+        2. Start by calling super().__init__(dimension_data) before custom logic.
     """
 
-    _PartTypeEnum: type[Enum]  # Must be set by subclasses
-    _builder_map: dict[Enum, Callable]  # Auto created in __init_subclass__
+    _PartTypeEnum: type[Enum]
+    _builder_map: dict[Enum, Callable]
 
     @property
     def PartTypeEnum(self) -> type[Enum]:  # pylint: disable=invalid-name
@@ -124,58 +115,46 @@ class BuilderABC(DimensionDataMixin, ABC):
         self, part_type: Enum, cached_solid: bool = False
     ) -> cq.Workplane | cq.Solid:
         """
-        Given a part type (an Enum member), builds and returns the corresponding
-        cadquery object.
+        Builds the part for the given PartTypeEnum member.
 
-        If cached_solid is False (default), returns a Workplane object.
-        If cached_solid is True, returns a Solid object (cached for performance).
+        Args:
+            part_type: PartTypeEnum member.
+            cached_solid: If True, returns cached Solid object; else a new Workplane.
+
+        Returns:
+            cadquery.Workplane or cadquery.Solid.
         """
         try:
             build_func = self._builder_map[part_type]
         except KeyError as exc:
             raise ValueError(
-                f"Invalid part type: {part_type}. "
-                f"Available parts: {list(self._builder_map.keys())}"
+                f"Invalid part type: {part_type}. Available: {list(self._builder_map.keys())}"
             ) from exc
 
         if cached_solid:
             func_name = build_func.__name__
-            if not func_name in self._solid_cache:
+            if func_name not in self._solid_cache:
                 self._solid_cache[func_name] = build_func(self).val()
             return self._solid_cache[func_name]
 
         return build_func(self)
 
     def clear_cache(self) -> None:
-        """Clear the solid cache if needed."""
+        """Clear the solid cache."""
         self._solid_cache.clear()
 
     @classmethod
     def get_part(
-        cls,
-        dimension_data: DimensionData,
-        part_type: Enum,
-        *builder_args,
-        **builder_kwargs,
+        cls, dimension_data: DimensionData, part_type: Enum, *args, **kwargs
     ) -> cq.Workplane:
-        """
-        Convenience method to build a single part directly without manually instantiating
-        a Builder instance.
-
-        Args:
-            dimension_data (DimensionData): The dimension data for the builder.
-            part_type (Enum): The part type to build.
-            *builder_args: Positional arguments forwarded to the Builder constructor.
-            **builder_kwargs: Keyword arguments forwarded to the Builder constructor.
-
-        Returns:
-            cadquery.Workplane: The built part as a Workplane object.
-        """
-        builder = cls(dimension_data, *builder_args, **builder_kwargs)
+        """Convenience method to build a part without manually instantiating the builder."""
+        builder = cls(dimension_data, *args, **kwargs)
         return builder.build_part(part_type)
 
     @staticmethod
     def register(part_type: Enum) -> Callable:
+        """Decorator to register build methods."""
+
         def decorator(func):
             # Defer attaching into _builder_map until __init_subclass__
             func._registered_part_type = part_type
@@ -186,27 +165,22 @@ class BuilderABC(DimensionDataMixin, ABC):
 
 class AssemblerABC(DimensionDataMixin, ABC):
     """
-    To be used as a base class for all assemblers.
-    Subclasses must implement the following:
+    Abstract base class for all Assemblers.
 
-    1. Define the following class attributes:
-       - _BuilderClass: A concrete Builder class that inherits from BuilderABC.
-         (Note: although these attribute names begin with an underscore,
-         they must be explicitly defined in each subclass.)
+    Subclasses must:
+        1. Define cls._BuilderClass (subclass of BuilderABC).
+        2. Define cls._PartEnum (an Enum of assembly parts).
+        3. Define cls._part_type_map (maps PartEnum -> PartTypeEnum).
+        4. Implement method get_metadata_map which should returns
+           metadata for each PartEnum member.
 
-    2. If additional instance variables are needed, implement a custom __init__ method.
-       The __init__ method must accept dimension_data: DimensionData as its first argument,
-       and must call super().__init__(dimension_data) before adding custom logic.
-
-    3. Implement the get_metadata_map method.
-       It must return a dictionary mapping part types (builder.PartTypeEnum members)
-       to metadata dictionaries containing keyword arguments for the cq.Assembly.add method.
+    Shortcut:
+        If _PartEnum is identical to _BuilderClass._PartTypeEnum,
+        _part_type_map should be omitted and will default to identity mapping.
     """
 
-    _BuilderClass: type[BuilderABC]  # Subclasses need to assign this.
-    _PartEnum: type[Enum]  # Subclasses need to assign this.
-
-    # Subclasses must define if cls._PartEnum is not cls._BuilderClass._PartTypeEnum
+    _BuilderClass: type[BuilderABC]
+    _PartEnum: type[Enum]
     _part_type_map: dict[Enum, Enum]
 
     @property
@@ -216,61 +190,54 @@ class AssemblerABC(DimensionDataMixin, ABC):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
 
-        # Validate cls._BuilderClass
-        if not hasattr(cls, "_BuilderClass"):
-            raise TypeError(f"{cls.__name__} must define _BuilderClass.")
-        if not issubclass(cls._BuilderClass, BuilderABC):
+        if not hasattr(cls, "_BuilderClass") or not issubclass(
+            cls._BuilderClass, BuilderABC
+        ):
             raise TypeError(
-                f"{cls.__name__}._BuilderClass must inherit from BuilderABC."
+                f"{cls.__name__} must define _BuilderClass as a BuilderABC subclass."
+            )
+        if not hasattr(cls, "_PartEnum") or not issubclass(cls._PartEnum, Enum):
+            raise TypeError(
+                f"{cls.__name__} must define _PartEnum as an Enum subclass."
             )
 
-        # Validate cls._PartEnum
-        if not hasattr(cls, "_PartEnum"):
-            raise TypeError(f"{cls.__name__} must define _PartEnum.")
-        if not issubclass(cls._PartEnum, Enum):
-            raise TypeError(f"{cls.__name__}._PartEnum must be an Enum.")
-
+        # Identity map shortcut
         if cls._PartEnum is cls._BuilderClass._PartTypeEnum:
             if hasattr(cls, "_part_type_map"):
                 raise ValueError(
-                    "No need to manually define '_part_type_map' when "
-                    f"{cls.__name__}._PartEnum is {cls._BuilderClass.__name__}._PartTypeEnum"
+                    f"{cls.__name__}: should not define _part_type_map when "
+                    "_PartEnum == _BuilderClass._PartTypeEnum."
                 )
             cls._part_type_map = {member: member for member in cls._PartEnum}
-            return  # Dont need to validate keys member below when assigned this way.
+            return
 
-        # Validate cls._part_type_map data structure
-        if not hasattr(cls, "_part_type_map"):
-            raise TypeError(f"{cls.__name__} must define _part_type_map.")
-        if not isinstance(cls._part_type_map, dict):
-            raise TypeError(f"{cls.__name__}._part_type_map must be a dictionary.")
+        # Validate _part_type_map
+        if not hasattr(cls, "_part_type_map") or not isinstance(
+            cls._part_type_map, dict
+        ):
+            raise TypeError(f"{cls.__name__} must define _part_type_map as a dict.")
 
         # Validate keys of cls._part_type_map
         actual_keys = set(cls._part_type_map.keys())
         expected_keys = set(cls._PartEnum)
         if actual_keys != expected_keys:
             raise ValueError(
-                f"Incomplete/Erroneous mapping of cls._PartEnum:\n"
-                f"Expected the following PartEnum keys:\n{expected_keys}\n"
-                f"Got the following keys:\n{actual_keys}"
+                f"{cls.__name__}: incomplete _part_type_map keys: "
+                f"expected {expected_keys}, got {actual_keys}"
             )
 
         # Validate values of cls._part_type_map
         actual_values = set(cls._part_type_map.values())
         allowed_values = set(cls._BuilderClass._PartTypeEnum)
-        non_part_type_values = actual_values - allowed_values
-        if non_part_type_values:
+        invalid_values = actual_values - allowed_values
+        if invalid_values:
             raise ValueError(
-                f"Only allowed to map to the following part types:\n{allowed_values}\n"
-                f"Got the following 'forbidden' part types:\n{non_part_type_values}"
+                f"{cls.__name__}: _part_type_map contains invalid PartType values: {invalid_values}"
             )
 
-    def __init__(
-        self,
-        dimension_data: DimensionData,
-    ):
+    def __init__(self, dimension_data: DimensionData):
         """
-        Initialize base assembler dimensions and builder.
+        Initialize assembler and builder.
 
         Args:
             dimension_data (DimensionData): DimensionData instance containing
@@ -281,62 +248,48 @@ class AssemblerABC(DimensionDataMixin, ABC):
 
     @abstractmethod
     def get_metadata_map(self) -> dict[Enum, dict]:
-        pass
+        """Return metadata for each PartEnum member."""
 
     def _get_assembly_data(
         self, assembly_parts: Iterable[Enum]
     ) -> list[tuple[cq.Workplane, dict]]:
-        """
-        Build parts and collect their metadata.
-
-        Args:
-            assembly_parts (Iterable[Enum]): Iterable of part (PartEnum members)
-                to include in the assembly.
-
-        Returns:
-            list[tuple[cq.Workplane, dict]]: List of tuples containing
-                the part metadata.
-        """
-        assembly_data = []
+        """Helper used by 'assemble' to build parts and attach metadata."""
+        data = []
         metadata_map = self.get_metadata_map()
         for part in assembly_parts:
-            try:
-                metadata = metadata_map[part]
-            except KeyError as exc:
-                raise ValueError(f"Invalid part type: {part}") from exc
+            if part not in metadata_map:
+                raise ValueError(f"Missing metadata for part: {part}")
 
+            metadata = metadata_map[part]
             part_type = self._part_type_map[part]
-            cq_solid = self.builder.build_part(part_type, cached_solid=True)
-            assembly_data.append((cq_solid, metadata))
-        return assembly_data
+            solid = self.builder.build_part(part_type, cached_solid=True)
+            data.append((solid, metadata))
+        return data
 
     def assemble(self, assembly_parts: Iterable[Enum] | None = None) -> cq.Assembly:
+        """
+        Build an assembly from specified parts.
+
+        Args:
+            assembly_parts: Iterable of PartEnum members. Defaults to all parts.
+
+        Returns:
+            cadquery.Assembly
+        """
         assembly_parts = assembly_parts or tuple(self.PartEnum)
         assembly = cq.Assembly()
-        for cq_solid, metadata in self._get_assembly_data(assembly_parts):
-            assembly.add(cq_solid, **metadata)
+        for solid, metadata in self._get_assembly_data(assembly_parts):
+            assembly.add(solid, **metadata)
         return assembly
 
     @classmethod
     def get_assembly(
         cls,
         dimension_data: DimensionData,
-        *assembler_args,
+        *args,
         assembly_parts: Iterable[Enum] | None = None,
-        **assembler_kwargs,
+        **kwargs,
     ) -> cq.Assembly:
-        """
-        Convenience method to create an assembly directly without manually instantiating
-        an Assembler instance.
-
-        Args:
-            dimension_data (DimensionData): The dimension data for the assembly.
-            *assembler_args: Positional arguments forwarded to the Assembler constructor.
-            assembly_parts (Iterable[Enum], optional): Parts (members of self.PartEnum) to include. Defaults to all parts.
-            **assembler_kwargs: Keyword arguments forwarded to the Assembler constructor.
-
-        Returns:
-            cadquery.Assembly: The assembled cadquery Assembly object.
-        """
-        assembler = cls(dimension_data, *assembler_args, **assembler_kwargs)
-        return assembler.assemble(assembly_parts=assembly_parts)
+        """Convenience method to create an assembly directly."""
+        assembler = cls(dimension_data, *args, **kwargs)
+        return assembler.assemble(assembly_parts)
