@@ -32,6 +32,6 @@ def show_generic_box_part():
 
 
 
-# show_garbage_sort_box()
+show_garbage_sort_box()
 # show_generic_box_part()
-show_generic_box()
+# show_generic_box()

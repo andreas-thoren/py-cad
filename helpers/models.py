@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 import cadquery as cq
 
 
@@ -12,7 +12,7 @@ class DimensionData:
     x_length: int | float
     y_length: int | float
     z_length: int | float
-    material_thickness: int | float | dict[Enum, int | float]
+    material_thickness: int | float | dict[StrEnum, int | float]
 
 
 class DimensionDataMixin:
@@ -37,7 +37,7 @@ class DimensionDataMixin:
             return material_thickness.copy()
         return material_thickness
 
-    def get_part_thickness(self, part_type: Enum) -> int | float:
+    def get_part_thickness(self, part_type: StrEnum) -> int | float:
         """Get the thickness of a specific part."""
         material_thickness = self._dimension_data.material_thickness
         if isinstance(material_thickness, dict):
@@ -65,7 +65,7 @@ class BuilderABC(DimensionDataMixin, ABC):
     Abstract base class for all Builder classes.
 
     Subclasses must:
-        1. Define cls._PartTypeEnum (an Enum).
+        1. Define cls._PartTypeEnum (a StrEnum).
         2. Implement build methods for each part type.
         3. Register each build method using @BuilderABC.register(part_type).
 
@@ -74,19 +74,19 @@ class BuilderABC(DimensionDataMixin, ABC):
         2. Start by calling super().__init__(dimension_data) before custom logic.
     """
 
-    _PartTypeEnum: type[Enum]
-    _builder_map: dict[Enum, Callable]
+    _PartTypeEnum: type[StrEnum]
+    _builder_map: dict[StrEnum, Callable]
 
     @property
-    def PartTypeEnum(self) -> type[Enum]:  # pylint: disable=invalid-name
+    def PartTypeEnum(self) -> type[StrEnum]:  # pylint: disable=invalid-name
         return self._PartTypeEnum
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
 
-        if not hasattr(cls, "_PartTypeEnum") or not issubclass(cls._PartTypeEnum, Enum):
+        if not hasattr(cls, "_PartTypeEnum") or not issubclass(cls._PartTypeEnum, StrEnum):
             raise TypeError(
-                f"{cls.__name__} must define _PartTypeEnum as an Enum subclass."
+                f"{cls.__name__} must define _PartTypeEnum as a StrEnum subclass."
             )
 
         # Make a copy of concrete parents _builder_map (if concrete parent exists)
@@ -102,7 +102,7 @@ class BuilderABC(DimensionDataMixin, ABC):
                 part_type = attr._registered_part_type
                 cls._builder_map[part_type] = attr
 
-        # Safety check: ensure all Enum members are mapped
+        # Safety check: ensure all StrEnum members are mapped
         missing_parts = [
             member for member in cls._PartTypeEnum if member not in cls._builder_map
         ]
@@ -116,7 +116,7 @@ class BuilderABC(DimensionDataMixin, ABC):
         self._solid_cache = {}
 
     def build_part(
-        self, part_type: Enum, cached_solid: bool = False
+        self, part_type: StrEnum, cached_solid: bool = False
     ) -> cq.Workplane | cq.Solid:
         """
         Builds the part for the given PartTypeEnum member.
@@ -149,14 +149,14 @@ class BuilderABC(DimensionDataMixin, ABC):
 
     @classmethod
     def get_part(
-        cls, dimension_data: DimensionData, part_type: Enum, *args, **kwargs
+        cls, dimension_data: DimensionData, part_type: StrEnum, *args, **kwargs
     ) -> cq.Workplane:
         """Convenience method to build a part without manually instantiating the builder."""
         builder = cls(dimension_data, *args, **kwargs)
         return builder.build_part(part_type)
 
     @staticmethod
-    def register(part_type: Enum) -> Callable:
+    def register(part_type: StrEnum) -> Callable:
         """Decorator to register build methods."""
 
         def decorator(func):
@@ -173,7 +173,7 @@ class AssemblerABC(DimensionDataMixin, ABC):
 
     Subclasses must:
         1. Define cls._BuilderClass (subclass of BuilderABC).
-        2. Define cls._PartEnum (an Enum of assembly parts).
+        2. Define cls._PartEnum (a StrEnum of assembly parts).
         3. Define cls._part_type_map (maps PartEnum -> PartTypeEnum).
         4. Implement method get_metadata_map which should returns
            metadata for each PartEnum member.
@@ -184,11 +184,11 @@ class AssemblerABC(DimensionDataMixin, ABC):
     """
 
     _BuilderClass: type[BuilderABC]
-    _PartEnum: type[Enum]
-    _part_type_map: dict[Enum, Enum]
+    _PartEnum: type[StrEnum]
+    _part_type_map: dict[StrEnum, StrEnum]
 
     @property
-    def PartEnum(self) -> type[Enum]:  # pylint: disable=invalid-name
+    def PartEnum(self) -> type[StrEnum]:  # pylint: disable=invalid-name
         return self._PartEnum
 
     def __init_subclass__(cls, **kwargs):
@@ -200,9 +200,9 @@ class AssemblerABC(DimensionDataMixin, ABC):
             raise TypeError(
                 f"{cls.__name__} must define _BuilderClass as a BuilderABC subclass."
             )
-        if not hasattr(cls, "_PartEnum") or not issubclass(cls._PartEnum, Enum):
+        if not hasattr(cls, "_PartEnum") or not issubclass(cls._PartEnum, StrEnum):
             raise TypeError(
-                f"{cls.__name__} must define _PartEnum as an Enum subclass."
+                f"{cls.__name__} must define _PartEnum as an StrEnum subclass."
             )
 
         # Identity map shortcut
@@ -251,11 +251,11 @@ class AssemblerABC(DimensionDataMixin, ABC):
         self.builder = self._BuilderClass(dimension_data)
 
     @abstractmethod
-    def get_metadata_map(self) -> dict[Enum, dict]:
+    def get_metadata_map(self) -> dict[StrEnum, dict]:
         """Return metadata for each PartEnum member."""
 
     def _get_assembly_data(
-        self, assembly_parts: Iterable[Enum]
+        self, assembly_parts: Iterable[StrEnum]
     ) -> list[tuple[cq.Workplane, dict]]:
         """Helper used by 'assemble' to build parts and attach metadata."""
         data = []
@@ -270,7 +270,7 @@ class AssemblerABC(DimensionDataMixin, ABC):
             data.append((solid, metadata))
         return data
 
-    def assemble(self, assembly_parts: Iterable[Enum] | None = None) -> cq.Assembly:
+    def assemble(self, assembly_parts: Iterable[StrEnum] | None = None) -> cq.Assembly:
         """
         Build an assembly from specified parts.
 
@@ -291,7 +291,7 @@ class AssemblerABC(DimensionDataMixin, ABC):
         cls,
         dimension_data: DimensionData,
         *args,
-        assembly_parts: Iterable[Enum] | None = None,
+        assembly_parts: Iterable[StrEnum] | None = None,
         **kwargs,
     ) -> cq.Assembly:
         """Convenience method to create an assembly directly."""

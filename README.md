@@ -28,20 +28,20 @@ your_project
 
 In `project_data.py`, define:
 
-* `Part` (Enum) — unique parts used in the final assembly (may include mirrored or variant instances)
-* `PartType` (Enum) — distinct shape templates needed to build those parts
+* `Part` (StrEnum) — unique parts used in the final assembly (may include mirrored or variant instances)
+* `PartType` (StrEnum) — distinct shape templates needed to build those parts
 * `PART_TYPE_MAP` (dict[Part, PartType]) — Can be defined here or directly at the _part_type_map of the AssemblerABC subclass definition.
 
 ```python
-from enum import Enum, auto
+from enum import StrEnum, auto
 from helpers.models import DimensionData
 
-class Part(Enum):
+class Part(StrEnum):
     BOTTOM = auto()
     LEFT_SIDE = auto()
     RIGHT_SIDE = auto()
 
-class PartType(Enum):
+class PartType(StrEnum):
     BOTTOM = auto()
     SIDE_PANEL = auto()
 
