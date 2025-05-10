@@ -3,6 +3,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from enum import StrEnum
 import cadquery as cq
+from .enum_helpers import create_str_enum, extend_str_enum
 
 
 @dataclass
@@ -76,25 +77,43 @@ class BuilderABC(DimensionDataMixin, ABC):
 
     _PartTypeEnum: type[StrEnum]
     _builder_map: dict[StrEnum, Callable]
+    # part_types: Iterable[str] | dict[str, str] | type[StrEnum]
+    # new_part_types: Iterable[str] | dict[str, str] | type[StrEnum]
 
     @property
     def PartTypeEnum(self) -> type[StrEnum]:  # pylint: disable=invalid-name
         return self._PartTypeEnum
 
+    @classmethod
+    def _get_part_type_enum(cls) -> type[StrEnum]:
+        members = cls.__dict__.get("part_types")
+        new_members = cls.__dict__.get("new_part_types")
+
+        if members:
+            if isinstance(members, type) and issubclass(members, StrEnum):
+                return members
+            return create_str_enum("PartType", members)
+
+        parent_enum: type[StrEnum] = getattr(super(cls, cls), "_PartTypeEnum", None)
+        if parent_enum is None:
+            raise ValueError(
+                "If not subclassing concrete Builder classes must define 'part_types'."
+            )
+
+        if new_members:
+            return extend_str_enum(parent_enum, new_members, replace_dup_members=True)
+
+        return parent_enum
+
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-
-        if not hasattr(cls, "_PartTypeEnum") or not issubclass(cls._PartTypeEnum, StrEnum):
-            raise TypeError(
-                f"{cls.__name__} must define _PartTypeEnum as a StrEnum subclass."
-            )
+        cls._PartTypeEnum = cls._get_part_type_enum()
 
         # Make a copy of concrete parents _builder_map (if concrete parent exists)
         parent_map = getattr(cls, "_builder_map", None)
         if parent_map is not None and not isinstance(parent_map, dict):
             raise TypeError(f"{cls.__name__}._builder_map must be a dict if defined.")
         cls._builder_map = (parent_map or {}).copy()
-
 
         # Scan the class for methods with registered parts
         for attr in cls.__dict__.values():

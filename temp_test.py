@@ -7,10 +7,16 @@ class Base:
         print(parent_my_attr)
         cls._my_attr = parent_my_attr + cls._my_attr
 
+class Mid2(Base):
+    _my_attr = ["Mid2"]
+
+class Mid3(Base):
+    _my_attr = ["Mid3"]
+
 class Mid(Base):
     _my_attr = ["Mid"]
 
-class Leaf(Mid):
+class Leaf(Mid2, Mid, Mid3):
     _my_attr = ["Leaf"]
     pass
 
