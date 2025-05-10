@@ -29,7 +29,9 @@ class TestEnumHelpers(unittest.TestCase):
 
     def test_extend_enum_successfully(self):
         BaseEnum = create_str_enum("BaseEnum", ["one", "two"])
-        ExtendedEnum = extend_str_enum(BaseEnum, ["three", "four"], class_name="ExtendedEnum")
+        ExtendedEnum = extend_str_enum(
+            BaseEnum, ["three", "four"], class_name="ExtendedEnum"
+        )
         members = set(ExtendedEnum.__members__)
         self.assertEqual({"ONE", "TWO", "THREE", "FOUR"}, members)
         self.assertEqual(ExtendedEnum.THREE.value, "three")
@@ -39,6 +41,14 @@ class TestEnumHelpers(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             extend_str_enum(BaseEnum, ["apple"])  # same key
         self.assertIn("keys", str(cm.exception))
+
+    def test_extend_enum_succesful_key_replacement(self):
+        BaseEnum = create_str_enum("BaseEnum", {"Apple": "apple", "Banana": "banana"})
+        self.assertEqual(BaseEnum.Banana, "banana")
+        ExtEnum = extend_str_enum(
+            BaseEnum, {"Banana": "banana2"}, replace_dup_members=True
+        )
+        self.assertEqual(ExtEnum.Banana, "banana2")
 
 
 if __name__ == "__main__":
