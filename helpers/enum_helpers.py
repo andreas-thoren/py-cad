@@ -7,6 +7,14 @@ from collections.abc import Iterable
 from enum import StrEnum
 
 
+def get_enum_string(cls: type[StrEnum]) -> str:
+    lines = [f"class {cls.__name__}(StrEnum):"]
+    for member in cls:
+        lines.append(f'    {member.name} = "{member.value}"')
+
+    return "\n".join(lines)
+
+
 def write_enum_file(cls: type[StrEnum], path: str, mode: str = "x"):
     """
     Write a StrEnum class definition to a Python file.
@@ -25,13 +33,12 @@ def write_enum_file(cls: type[StrEnum], path: str, mode: str = "x"):
     if not mode in {"x", "w", "a"}:
         raise ValueError("Mode should be 'x', 'w' or 'a'")
 
-    lines = ["\n"] if mode == "a" else ["from enum import StrEnum", ""]
-    lines.append(f"class {cls.__name__}(StrEnum):")
-    for member in cls:
-        lines.append(f'    {member.name} = "{member.value}"')
+    pre_enum = "\n\n" if mode == "a" else "from enum import StrEnum\n\n\n"
+    enum_string = get_enum_string(cls)
+    output_string = pre_enum + enum_string + "\n"
 
     with open(path, mode, encoding="utf-8") as f:
-        f.write("\n".join(lines) + "\n")
+        f.write(output_string)
 
 
 def normalize_key(key: str) -> str:
@@ -42,7 +49,7 @@ def normalize_value(value: str) -> str:
     return value.strip().lower()
 
 
-def normalize_dict(dct: dict[str, str]) -> dict:
+def normalize_dict(dct: dict[str, str]) -> dict[str, str]:
     return {normalize_key(key): normalize_value(val) for key, val in dct.items()}
 
 
@@ -84,6 +91,7 @@ def extend_str_enum(
     new_members: type[StrEnum] | dict[str, str] | Iterable[str],
     class_name: str = "",
     normalize_new_members: bool = True,
+    replace_dups: bool = False,
 ) -> type[StrEnum]:
     """
     Extend a StrEnum class with new members.
@@ -95,6 +103,7 @@ def extend_str_enum(
         normalize_new_members: If True normalises new members:
             - keys are uppercased, stripped and ' ' replaced with '_'
             - values are lowercased and stripped.
+        replace_dups: If True, existing keys in the base enum will be overwritten by new ones.
 
     Returns:
         A new StrEnum class combining old and new members.
@@ -112,7 +121,13 @@ def extend_str_enum(
     if normalize_new_members:
         new_members = normalize_dict(new_members)
 
-    members.update(new_members)
+    if replace_dups:
+        members.update(new_members)
+    else:
+        for key, val in new_members.items():
+            if not key in members:
+                members[key] = val
+
     class_name = class_name if class_name else enum_class.__name__
 
     # Old members should not be normalized and new are handled above
