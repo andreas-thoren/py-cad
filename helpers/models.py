@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Any
 import cadquery as cq
 
 
@@ -85,6 +86,10 @@ class ResolveMixin:
         cls, mapping: dict[str | StrEnum, str | StrEnum]
     ) -> dict[str, str]:
         return {cls.normalize(k): cls.normalize(v) for k, v in mapping.items()}
+
+    @classmethod
+    def normalize_keys(cls, mapping: dict[str | StrEnum, Any]) -> dict[str, Any]:
+        return {cls.normalize(k): v for k, v in mapping.items()}
 
     @classmethod
     def _dummy_normalize(cls, items):
@@ -298,6 +303,10 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
     def resolved_parts(self) -> frozenset[str]:
         return self._resolved_parts
 
+    @property
+    def resolved_part_map(self) -> dict[str, str]:
+        return self._resolved_part_map.copy()
+
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         # Resolve (normalize and add parent parts) through resolve_items
@@ -370,17 +379,33 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
     def get_metadata_map(self) -> dict[str | StrEnum, dict]:
         """Return metadata for each part in parts"""
 
+    def get_resolved_metadata_map(self) -> dict[str, dict]:
+        resolved_map = self.normalize_keys(self.get_metadata_map())
+
+        # Loop through ancester updating resolved_map
+        for base in self.__class__.__mro__[1:]:
+            parent_func = getattr(base, "get_metadata_map", None)
+            if parent_func is None or hasattr(parent_func, "__isabstractmethod__"):
+                continue
+
+            parent_map = parent_func(self)
+            # Younger parents come first in mro and should override older parents
+            resolved_map = self.normalize_keys(parent_map) | resolved_map
+
+        return resolved_map
+
     def _get_assembly_data(
-        self, assembly_parts: Iterable[StrEnum]
+        self, normalized_assembly_parts: Iterable[StrEnum]
     ) -> list[tuple[cq.Workplane, dict]]:
         """Helper used by 'assemble' to build parts and attach metadata."""
         data = []
-        metadata_map = self.get_metadata_map()
-        for part in assembly_parts:
-            if part not in metadata_map:
+        resolved_metadata_map = self.get_resolved_metadata_map()
+
+        for part in normalized_assembly_parts:
+            if part not in resolved_metadata_map:
                 raise ValueError(f"Missing metadata for part: {part}")
 
-            metadata = metadata_map[part]
+            metadata = resolved_metadata_map[part]
             part_type = self._resolved_part_map[part]
             solid = self.builder.build_part(part_type, cached_solid=True)
             data.append((solid, metadata))
