@@ -3,7 +3,6 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from enum import StrEnum
 import cadquery as cq
-from .enum_helpers import create_str_enum, extend_str_enum
 
 
 @dataclass
@@ -61,24 +60,56 @@ class DimensionDataMixin:
             ) from None
 
 
-class NormalizationMixin:
+class ResolveMixin:
 
     @staticmethod
-    def normalize_item(item: str | StrEnum) -> str:
+    def _normalize_item(item: str | StrEnum) -> str:
         return item.strip().lower()
 
     @staticmethod
-    def normalize_items(items: Iterable[str] | type[StrEnum]) -> set[str]:
+    def _normalize_items(items: Iterable[str] | type[StrEnum]) -> set[str]:
         # TODO add logic for raising errors when collisions both before and after normalization
-        return {NormalizationMixin.normalize_item(item) for item in items}
+        return {ResolveMixin._normalize_item(item) for item in items}
+
+    @classmethod
+    def _resolve_items(
+        cls, initial_attr_name: str, new_attr_name: str, resolved_attr_name: str
+    ) -> frozenset[str]:
+        items = cls.__dict__.get(initial_attr_name)
+
+        if items:
+            return frozenset(cls._normalize_items(items))
+
+        # # TODO Fix so that it works for multiple inheritance
+        parent_items = None
+        for base in cls.__mro__[1:]:
+            if hasattr(base, resolved_attr_name):
+                parent_items = getattr(base, resolved_attr_name)
+                break
+
+        if parent_items is None:
+            raise ValueError(
+                "If not subclassing concrete Builder classes must define 'part_types'."
+            )
+
+        new_items = cls.__dict__.get(new_attr_name)
+        new_items = cls._normalize_items(new_items) if new_items is not None else set()
+        return frozenset(parent_items | new_items)
+
+    @classmethod
+    def _resolve_dict(cls, dct: dict) -> dict:
+        return {
+            cls._normalize_item(key): cls._normalize_item(val)
+            for key, val in dct.items()
+        }
 
 
-class BuilderABC(DimensionDataMixin, NormalizationMixin, ABC):
+class BuilderABC(DimensionDataMixin, ResolveMixin, ABC):
     """
     Abstract base class for all Builder classes.
 
     Subclasses must:
-        1. Define cls._PartTypeEnum (a StrEnum).
+        1. Define part_types (Iterable[str] | type[StrEnum]).
         2. Implement build methods for each part type.
         3. Register each build method using @BuilderABC.register(part_type).
 
@@ -89,6 +120,8 @@ class BuilderABC(DimensionDataMixin, NormalizationMixin, ABC):
 
     part_types: Iterable[str] | type[StrEnum]
     new_part_types: Iterable[str] | type[StrEnum]
+    # attributes in _setup_attributes are only used during __init_subclass__. Deleted.
+    _setup_attributes = ("part_types", "new_part_types")
     _resolved_part_types: frozenset[str]
     _builder_map: dict[str, Callable]
 
@@ -96,54 +129,41 @@ class BuilderABC(DimensionDataMixin, NormalizationMixin, ABC):
     def resolved_part_types(self) -> frozenset[str]:
         return self._resolved_part_types
 
-    @classmethod
-    def _resolve_part_types(cls) -> frozenset[str]:
-        items = cls.__dict__.get("part_types")
-
-        if items:
-            return frozenset(cls.normalize_items(items))
-
-        # # TODO Validate that this works as expected
-        parent_items: set[str] = getattr(super(cls, cls), "_resolved_part_types", None)
-        if parent_items is None:
-            raise ValueError(
-                "If not subclassing concrete Builder classes must define 'part_types'."
-            )
-
-        new_items = cls.__dict__.get("new_part_types")
-        new_items = cls.normalize_items(new_items) if new_items is not None else set()
-        return frozenset(parent_items | new_items)
-
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        cls._resolved_part_types = cls._resolve_part_types()
 
-        # 1. Make a copy of concrete parents _builder_map (if concrete parent exists)
+        # Resolve (normalize and add parent part_types) through resolve_items
+        cls._resolved_part_types = cls._resolve_items(
+            "part_types", "new_part_types", "_resolved_part_types"
+        )
+
         # TODO validate that below inheritance fetching works
+        # Make a copy of concrete parents _builder_map (if concrete parent exists)
         parent_builder_map = getattr(cls, "_builder_map", None) or {}
 
-        # 2. Build the child_builder_map by scanning the class for methods with registered parts
+        # Build the child_builder_map by scanning the class for methods with registered parts
         child_builder_map = {}
         for attr in cls.__dict__.values():
             if callable(attr) and hasattr(attr, "_registered_part_type"):
-                part_type = cls.normalize_item(attr._registered_part_type)
+                part_type = cls._normalize_item(attr._registered_part_type)
                 child_builder_map[part_type] = attr
 
         # Current class_builder_map is the combined map, child definitions win if collisions.
         cls._builder_map = parent_builder_map | child_builder_map
 
-        # 3. Safety check: ensure all part types are mapped
+        # Safety check: ensure all part types are mapped
         missing_parts = list(cls._resolved_part_types - set(cls._builder_map.keys()))
         if missing_parts:
             raise ValueError(
                 f"{cls.__name__}._builder_map missing parts: {missing_parts}"
             )
 
-        # 4. Delete class attributes only used for subclass setup
-        delattr(cls, "part_types")
-        delattr(cls, "new_part_types")
+        # Delete class attributes only used for subclass setup
+        for attr in cls._setup_attributes:
+            if attr in cls.__dict__:
+                delattr(cls, attr)
 
-        # 5. TODO Add descriptor so that attempted access to this attributes makes it clear
+        # TODO Add descriptor so that attempted access to this attributes makes it clear
         # that they are only intended for class setup. Point to resolved_part_types!
 
     def __init__(self, dimension_data: DimensionData):
@@ -154,15 +174,17 @@ class BuilderABC(DimensionDataMixin, NormalizationMixin, ABC):
         self, part_type: StrEnum, cached_solid: bool = False
     ) -> cq.Workplane | cq.Solid:
         """
-        Builds the part for the given PartTypeEnum member.
+        Builds the part for the given part_type.
 
         Args:
-            part_type: PartTypeEnum member.
+            part_type: One of the parts in part_types/new_part_types or inherited part_types.
             cached_solid: If True, returns cached Solid object; else a new Workplane.
 
         Returns:
             cadquery.Workplane or cadquery.Solid.
         """
+        part_type = self._normalize_item(part_type)
+
         try:
             build_func = self._builder_map[part_type]
         except KeyError as exc:
@@ -171,10 +193,9 @@ class BuilderABC(DimensionDataMixin, NormalizationMixin, ABC):
             ) from exc
 
         if cached_solid:
-            func_name = build_func.__name__
-            if func_name not in self._solid_cache:
-                self._solid_cache[func_name] = build_func(self).val()
-            return self._solid_cache[func_name]
+            if part_type not in self._solid_cache:
+                self._solid_cache[part_type] = build_func(self).val()
+            return self._solid_cache[part_type]
 
         return build_func(self)
 
@@ -202,79 +223,90 @@ class BuilderABC(DimensionDataMixin, NormalizationMixin, ABC):
         return decorator
 
 
-class AssemblerABC(DimensionDataMixin, NormalizationMixin, ABC):
+class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
     """
     Abstract base class for all Assemblers.
 
     Subclasses must:
-        1. Define cls._BuilderClass (subclass of BuilderABC).
-        2. Define cls._PartEnum (a StrEnum of assembly parts).
-        3. Define cls._part_type_map (maps PartEnum -> PartTypeEnum).
+        1. Define cls.BuilderClass (subclass of BuilderABC).
+        2. Define cls.parts or cls.new_parts (only if inheriting from other concrete Builder)
+        3. Define cls.part_map which should be a dict mapping part: part_type (Builder).
         4. Implement method get_metadata_map which should returns
-           metadata for each PartEnum member.
+           metadata for each part specified in parts.
 
     Shortcut:
-        If _PartEnum is identical to _BuilderClass._PartTypeEnum,
-        _part_type_map should be omitted and will default to identity mapping.
+        If parts is identical to BuilderClass.part_types,
+        part_map should be omitted and will default to identity mapping.
     """
 
+    parts: Iterable[str] | type[StrEnum]
+    new_parts: Iterable[str] | type[StrEnum]
+    part_map: dict[str | StrEnum, str | StrEnum]
+    BuilderClass: type[BuilderABC]
+    # attributes in _setup_attributes are only used during __init_subclass__. Deleted.
+    _setup_attributes = ("parts", "new_parts", "part_map", "BuilderClass")
+    _resolved_parts: frozenset[str]
+    _resolved_part_map: dict[str, str]
     _BuilderClass: type[BuilderABC]
-    _PartEnum: type[StrEnum]
-    _part_type_map: dict[StrEnum, StrEnum]
 
     @property
-    def PartEnum(self) -> type[StrEnum]:  # pylint: disable=invalid-name
-        return self._PartEnum
+    def resolved_parts(self) -> frozenset[str]:
+        return self._resolved_parts
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
+        # Resolve (normalize and add parent parts) through resolve_items
+        cls._resolved_parts = cls._resolve_items(
+            "parts", "new_parts", "_resolved_parts"
+        )
 
-        if not hasattr(cls, "_BuilderClass") or not issubclass(
-            cls._BuilderClass, BuilderABC
+        # Check that BuilderClass is correct, move to private attribute.
+        if not hasattr(cls, "BuilderClass") or not issubclass(
+            cls.BuilderClass, BuilderABC
         ):
             raise TypeError(
-                f"{cls.__name__} must define _BuilderClass as a BuilderABC subclass."
+                f"{cls.__name__} must define BuilderClass as a BuilderABC subclass."
             )
-        if not hasattr(cls, "_PartEnum") or not issubclass(cls._PartEnum, StrEnum):
-            raise TypeError(
-                f"{cls.__name__} must define _PartEnum as an StrEnum subclass."
-            )
+        cls._BuilderClass = cls.BuilderClass
 
-        # Identity map shortcut
-        if cls._PartEnum is cls._BuilderClass._PartTypeEnum:
-            if hasattr(cls, "_part_type_map"):
+        # Identity map shortcut for _resolved_part_map
+        if cls._resolved_parts == cls._BuilderClass._resolved_part_types:
+            if hasattr(cls, "part_map"):
                 raise ValueError(
-                    f"{cls.__name__}: should not define _part_type_map when "
-                    "_PartEnum == _BuilderClass._PartTypeEnum."
+                    f"{cls.__name__}: should not define part_map when "
+                    "parts == _BuilderClass.part_types"
                 )
-            cls._part_type_map = {member: member for member in cls._PartEnum}
-            return
+            cls._resolved_part_map = {part: part for part in cls._resolved_parts}
+        else:  # Validate part_map
+            if not hasattr(cls, "part_map") or not isinstance(cls.part_map, dict):
+                raise TypeError(f"{cls.__name__} must define part_map as a dict.")
 
-        # TODO move all validation regarding _part_type_map to its own method
-        # TODO postpone validation until first call of assemble. Store _is_valid instance attribute.
-        # Validate _part_type_map
-        if not hasattr(cls, "_part_type_map") or not isinstance(
-            cls._part_type_map, dict
-        ):
-            raise TypeError(f"{cls.__name__} must define _part_type_map as a dict.")
+            # Validate keys of cls.part_map
+            cls._resolved_part_map = cls._resolve_dict(cls.part_map)
+            actual_keys = frozenset(cls._resolved_part_map.keys())
+            expected_keys = cls._resolved_parts
+            if actual_keys != expected_keys:
+                raise ValueError(
+                    f"{cls.__name__}: incomplete part_map keys: "
+                    f"expected {expected_keys}, got {actual_keys}"
+                )
 
-        # Validate keys of cls._part_type_map
-        actual_keys = set(cls._part_type_map.keys())
-        expected_keys = set(cls._PartEnum)
-        if actual_keys != expected_keys:
-            raise ValueError(
-                f"{cls.__name__}: incomplete _part_type_map keys: "
-                f"expected {expected_keys}, got {actual_keys}"
-            )
+            # Validate values of cls.part_map
+            actual_values = frozenset(cls._resolved_part_map.values())
+            allowed_values = cls._BuilderClass._resolved_part_types
+            invalid_values = actual_values - allowed_values
+            if invalid_values:
+                raise ValueError(
+                    f"{cls.__name__}: part_map contains invalid part type values: {invalid_values}"
+                )
 
-        # Validate values of cls._part_type_map
-        actual_values = set(cls._part_type_map.values())
-        allowed_values = set(cls._BuilderClass._PartTypeEnum)
-        invalid_values = actual_values - allowed_values
-        if invalid_values:
-            raise ValueError(
-                f"{cls.__name__}: _part_type_map contains invalid PartType values: {invalid_values}"
-            )
+        # Delete class attributes only used for subclass setup
+        for attr in cls._setup_attributes:
+            if attr in cls.__dict__:
+                delattr(cls, attr)
+
+        # TODO Add descriptor so that attempted access to this attributes makes it clear
+        # that they are only intended for class setup. Point to resolved_part_types!
 
     def __init__(self, dimension_data: DimensionData):
         """
@@ -289,7 +321,7 @@ class AssemblerABC(DimensionDataMixin, NormalizationMixin, ABC):
 
     @abstractmethod
     def get_metadata_map(self) -> dict[StrEnum, dict]:
-        """Return metadata for each PartEnum member."""
+        """Return metadata for each part in parts"""
 
     def _get_assembly_data(
         self, assembly_parts: Iterable[StrEnum]
@@ -302,7 +334,7 @@ class AssemblerABC(DimensionDataMixin, NormalizationMixin, ABC):
                 raise ValueError(f"Missing metadata for part: {part}")
 
             metadata = metadata_map[part]
-            part_type = self._part_type_map[part]
+            part_type = self._resolved_part_map[part]
             solid = self.builder.build_part(part_type, cached_solid=True)
             data.append((solid, metadata))
         return data
@@ -313,14 +345,18 @@ class AssemblerABC(DimensionDataMixin, NormalizationMixin, ABC):
         Build an assembly from specified parts.
 
         Args:
-            assembly_parts: Iterable of PartEnum members. Defaults to all parts.
+            assembly_parts: Iterable of parts used in assembly. Defaults to all parts.
 
         Returns:
             cadquery.Assembly
         """
-        assembly_parts = assembly_parts or tuple(self.PartEnum)
+        assembly_parts = (
+            self._normalize_items(assembly_parts)
+            if assembly_parts
+            else self._resolved_parts
+        )
         assembly = cq.Assembly()
-        # TODO if assembly_data is not being passed in check _build_part_map
+
         for solid, metadata in self._get_assembly_data(assembly_parts):
             assembly.add(solid, **metadata)
         return assembly
