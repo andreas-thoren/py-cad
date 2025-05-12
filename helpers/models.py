@@ -92,7 +92,7 @@ class ResolveMixin:
         return {cls.normalize(k): v for k, v in mapping.items()}
 
     @classmethod
-    def _dummy_normalize(cls, items):
+    def _indentity(cls, items):
         return items
 
     @classmethod
@@ -110,13 +110,13 @@ class ResolveMixin:
         if normalize:
             normalize_func = cls.normalize_map if items_is_dict else cls.normalize_all
         else:
-            normalize_func = cls._dummy_normalize
+            normalize_func = cls._indentity
 
         # If explicitly defined items (no inheritance) return after normalization
         if items:
             return normalize_func(items)
 
-        # Loop through ancester creating parent_items
+        # Loop through ancestors creating parent_items
         parent_items = type(items)()
         for base in cls.__mro__[1:]:
             if hasattr(base, resolved_attr_name):
@@ -339,22 +339,7 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
             cls._resolved_part_map = cls._resolve_items(
                 "part_map", "new_part_map", "_resolved_part_map"
             )
-            actual_keys = frozenset(cls._resolved_part_map.keys())
-            expected_keys = cls._resolved_parts
-            if actual_keys != expected_keys:
-                raise ValueError(
-                    f"{cls.__name__}: incomplete part_map keys: "
-                    f"expected {expected_keys}, got {actual_keys}"
-                )
-
-            # Validate values of cls.part_map
-            actual_values = frozenset(cls._resolved_part_map.values())
-            allowed_values = cls._BuilderClass._resolved_part_types
-            invalid_values = actual_values - allowed_values
-            if invalid_values:
-                raise ValueError(
-                    f"{cls.__name__}: part_map contains invalid part type values: {invalid_values}"
-                )
+            cls._validate_resolved_part_map()
 
         # Delete class attributes only used for subclass setup
         for attr in cls._setup_attributes:
@@ -363,6 +348,25 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
 
         # TODO Add descriptor so that attempted access to this attributes makes it clear
         # that they are only intended for class setup. Point to resolved_part_types!
+
+    @classmethod
+    def _validate_resolved_part_map(cls):
+        actual_keys = frozenset(cls._resolved_part_map.keys())
+        expected_keys = cls._resolved_parts
+        if actual_keys != expected_keys:
+            raise ValueError(
+                f"{cls.__name__}: incomplete part_map keys: "
+                f"expected {expected_keys}, got {actual_keys}"
+            )
+
+        # Validate values of cls.part_map
+        actual_values = frozenset(cls._resolved_part_map.values())
+        allowed_values = cls._BuilderClass._resolved_part_types
+        invalid_values = actual_values - allowed_values
+        if invalid_values:
+            raise ValueError(
+                f"{cls.__name__}: part_map contains invalid part type values: {invalid_values}"
+            )
 
     def __init__(self, dimension_data: DimensionData):
         """
@@ -379,7 +383,7 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
     def get_metadata_map(self) -> dict[str | StrEnum, dict]:
         """Return metadata for each part in parts"""
 
-    def get_resolved_metadata_map(self) -> dict[str, dict]:
+    def get_resolved_metadata_map(self) -> dict[str, dict[str, Any]]:
         resolved_map = self.normalize_keys(self.get_metadata_map())
 
         # Loop through ancester updating resolved_map
@@ -411,7 +415,7 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
             data.append((solid, metadata))
         return data
 
-    def assemble(self, assembly_parts: Iterable[StrEnum] | None = None) -> cq.Assembly:
+    def assemble(self, assembly_parts: Iterable[str | StrEnum] | None = None) -> cq.Assembly:
         """
         Build an assembly from specified parts.
 
