@@ -281,22 +281,17 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
         "new_parts",
         "part_map",
         "new_part_map",
-        "metadata_map",
-        "new_metadata_map"
         "BuilderClass",
     )
     parts: Iterable[str] | type[StrEnum]
     new_parts: Iterable[str] | type[StrEnum]
     part_map: dict[str | StrEnum, str | StrEnum]
     new_part_map: dict[str | StrEnum, str | StrEnum]
-    metadata_map: dict[str | StrEnum, dict]
-    new_metadata_map: dict[str | StrEnum, dict]
     BuilderClass: type[BuilderABC]
 
     # Resolved attributes. Dynamically assigned in __init_subclass__
     _resolved_parts: frozenset[str]
     _resolved_part_map: dict[str, str]
-    _resolved_metadata_map: dict[str | StrEnum, dict]
     _BuilderClass: type[BuilderABC]
 
     @property
@@ -391,7 +386,6 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
             data.append((solid, metadata))
         return data
 
-    # TODO allow for assembly_data being passed in as var. If so do not require get_metadata_map.
     def assemble(self, assembly_parts: Iterable[StrEnum] | None = None) -> cq.Assembly:
         """
         Build an assembly from specified parts.
