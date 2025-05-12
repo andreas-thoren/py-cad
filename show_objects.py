@@ -29,9 +29,19 @@ def show_generic_box_part():
     part = Builder.get_part(BOX_DIMENSIONS, part_type)
     show_object(part, name=part_type.name.replace("_", " ").capitalize())
 
+def show_test_project():
+    from tests.test_project.project_data import DIMENSION_DATA, Part
+    from tests.test_project.parts import CompleteBuilder
+    from tests.test_project.assembly import CompleteAssembler
+
+    assembler = CompleteAssembler(DIMENSION_DATA)
+    assembly_parts = [Part.BOTTOM, Part.LONG_SIDE, Part.SHORT_SIDE]
+    # assembly = assembler.assemble(assembly_parts)
+    assembly = assembler.assemble()
+    show_object(assembly, name="Garbage Sort Box Assembly")  # type: ignore
 
 
-
-show_garbage_sort_box()
+# show_garbage_sort_box()
+show_test_project()
 # show_generic_box_part()
 # show_generic_box()

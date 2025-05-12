@@ -117,11 +117,17 @@ class ResolveMixin:
             return normalize_func(items)
 
         # Loop through ancestors creating parent_items
-        parent_items = type(items)()
+        parent_items = None
         for base in cls.__mro__[1:]:
-            if hasattr(base, resolved_attr_name):
+            older_parent_items = getattr(base, resolved_attr_name, None)
+            if older_parent_items is None:
+                continue
+
+            if parent_items is None:
+                parent_items = older_parent_items
+            else:
                 # Younger parents come first in mro and should override older parents
-                parent_items = getattr(base, resolved_attr_name) | parent_items
+                parent_items = older_parent_items | parent_items
 
         # Not explicitly defining items is only valid in inheritance scenarios
         if not parent_items:
