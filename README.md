@@ -202,8 +202,10 @@ pip list            # Should list cadquery, CQ-editor, etc.
 
 ## TODO
 - Temporarily inactivate inheritance by putting logic in its own method that returns immediatly
+- Normalize access methods like build_part and assemble.
+- Rename _part_type_map to part_type_map and normalize in subclass init. Resolve and put in _resolved_part_type_map. Make property for access.
 - _part_type_map -> part_type_map. Internally normalized and stored in _part_type_map. part_type_map is then deleted.
 - Replace enums for iterable of strings (or if user wants StrEnum) thats internally normalized and cast to a set. Will apply both to builder part_types and assembler parts.
-- Create NormalizationMixin
+- Add logic to NormalizationMixin that raises if collisions both before and after normalization.
 - Fix inheritance
 - Create descriptor for class variables only used for class setup and then deleted

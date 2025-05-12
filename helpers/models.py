@@ -61,7 +61,19 @@ class DimensionDataMixin:
             ) from None
 
 
-class BuilderABC(DimensionDataMixin, ABC):
+class NormalizationMixin:
+
+    @staticmethod
+    def normalize_item(item: str | StrEnum) -> str:
+        return item.strip().lower()
+
+    @staticmethod
+    def normalize_items(items: Iterable[str] | type[StrEnum]) -> set[str]:
+        # TODO add logic for raising errors when collisions both before and after normalization
+        return {NormalizationMixin.normalize_item(item) for item in items}
+
+
+class BuilderABC(DimensionDataMixin, NormalizationMixin, ABC):
     """
     Abstract base class for all Builder classes.
 
@@ -75,60 +87,64 @@ class BuilderABC(DimensionDataMixin, ABC):
         2. Start by calling super().__init__(dimension_data) before custom logic.
     """
 
-    _PartTypeEnum: type[StrEnum]
-    _builder_map: dict[StrEnum, Callable]
-    # part_types: Iterable[str] | dict[str, str] | type[StrEnum]
-    # new_part_types: Iterable[str] | dict[str, str] | type[StrEnum]
+    part_types: Iterable[str] | type[StrEnum]
+    new_part_types: Iterable[str] | type[StrEnum]
+    _resolved_part_types: frozenset[str]
+    _builder_map: dict[str, Callable]
 
     @property
-    def PartTypeEnum(self) -> type[StrEnum]:  # pylint: disable=invalid-name
-        return self._PartTypeEnum
+    def resolved_part_types(self) -> frozenset[str]:
+        return self._resolved_part_types
 
     @classmethod
-    def _get_part_type_enum(cls) -> type[StrEnum]:
-        members = cls.__dict__.get("part_types")
-        new_members = cls.__dict__.get("new_part_types")
+    def _resolve_part_types(cls) -> frozenset[str]:
+        items = cls.__dict__.get("part_types")
 
-        if members:
-            if isinstance(members, type) and issubclass(members, StrEnum):
-                return members
-            return create_str_enum("PartType", members)
+        if items:
+            return frozenset(cls.normalize_items(items))
 
-        parent_enum: type[StrEnum] = getattr(super(cls, cls), "_PartTypeEnum", None)
-        if parent_enum is None:
+        # # TODO Validate that this works as expected
+        parent_items: set[str] = getattr(super(cls, cls), "_resolved_part_types", None)
+        if parent_items is None:
             raise ValueError(
                 "If not subclassing concrete Builder classes must define 'part_types'."
             )
 
-        if new_members:
-            return extend_str_enum(parent_enum, new_members, replace_dup_members=True)
-
-        return parent_enum
+        new_items = cls.__dict__.get("new_part_types")
+        new_items = cls.normalize_items(new_items) if new_items is not None else set()
+        return frozenset(parent_items | new_items)
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        cls._PartTypeEnum = cls._get_part_type_enum()
+        cls._resolved_part_types = cls._resolve_part_types()
 
-        # Make a copy of concrete parents _builder_map (if concrete parent exists)
-        parent_map = getattr(cls, "_builder_map", None)
-        if parent_map is not None and not isinstance(parent_map, dict):
-            raise TypeError(f"{cls.__name__}._builder_map must be a dict if defined.")
-        cls._builder_map = (parent_map or {}).copy()
+        # 1. Make a copy of concrete parents _builder_map (if concrete parent exists)
+        # TODO validate that below inheritance fetching works
+        parent_builder_map = getattr(cls, "_builder_map", None) or {}
 
-        # Scan the class for methods with registered parts
+        # 2. Build the child_builder_map by scanning the class for methods with registered parts
+        child_builder_map = {}
         for attr in cls.__dict__.values():
             if callable(attr) and hasattr(attr, "_registered_part_type"):
-                part_type = attr._registered_part_type
-                cls._builder_map[part_type] = attr
+                part_type = cls.normalize_item(attr._registered_part_type)
+                child_builder_map[part_type] = attr
 
-        # Safety check: ensure all StrEnum members are mapped
-        missing_parts = [
-            member for member in cls._PartTypeEnum if member not in cls._builder_map
-        ]
+        # Current class_builder_map is the combined map, child definitions win if collisions.
+        cls._builder_map = parent_builder_map | child_builder_map
+
+        # 3. Safety check: ensure all part types are mapped
+        missing_parts = list(cls._resolved_part_types - set(cls._builder_map.keys()))
         if missing_parts:
             raise ValueError(
                 f"{cls.__name__}._builder_map missing parts: {missing_parts}"
             )
+
+        # 4. Delete class attributes only used for subclass setup
+        delattr(cls, "part_types")
+        delattr(cls, "new_part_types")
+
+        # 5. TODO Add descriptor so that attempted access to this attributes makes it clear
+        # that they are only intended for class setup. Point to resolved_part_types!
 
     def __init__(self, dimension_data: DimensionData):
         self._dimension_data = dimension_data
@@ -186,7 +202,7 @@ class BuilderABC(DimensionDataMixin, ABC):
         return decorator
 
 
-class AssemblerABC(DimensionDataMixin, ABC):
+class AssemblerABC(DimensionDataMixin, NormalizationMixin, ABC):
     """
     Abstract base class for all Assemblers.
 
