@@ -199,3 +199,11 @@ pip install -e .
 python --version    # Should display 3.12.x
 pip list            # Should list cadquery, CQ-editor, etc.
 ```
+
+## TODO
+- Temporarily inactivate inheritance by putting logic in its own method that returns immediatly
+- _part_type_map -> part_type_map. Internally normalized and stored in _part_type_map. part_type_map is then deleted.
+- Replace enums for iterable of strings (or if user wants StrEnum) thats internally normalized and cast to a set. Will apply both to builder part_types and assembler parts.
+- Create NormalizationMixin
+- Fix inheritance
+- Create descriptor for class variables only used for class setup and then deleted

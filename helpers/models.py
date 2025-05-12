@@ -234,6 +234,8 @@ class AssemblerABC(DimensionDataMixin, ABC):
             cls._part_type_map = {member: member for member in cls._PartEnum}
             return
 
+        # TODO move all validation regarding _part_type_map to its own method
+        # TODO postpone validation until first call of assemble. Store _is_valid instance attribute.
         # Validate _part_type_map
         if not hasattr(cls, "_part_type_map") or not isinstance(
             cls._part_type_map, dict
@@ -289,6 +291,7 @@ class AssemblerABC(DimensionDataMixin, ABC):
             data.append((solid, metadata))
         return data
 
+    # TODO allow for assembly_data being passed in as var. If so do not require get_metadata_map.
     def assemble(self, assembly_parts: Iterable[StrEnum] | None = None) -> cq.Assembly:
         """
         Build an assembly from specified parts.
@@ -301,6 +304,7 @@ class AssemblerABC(DimensionDataMixin, ABC):
         """
         assembly_parts = assembly_parts or tuple(self.PartEnum)
         assembly = cq.Assembly()
+        # TODO if assembly_data is not being passed in check _build_part_map
         for solid, metadata in self._get_assembly_data(assembly_parts):
             assembly.add(solid, **metadata)
         return assembly
