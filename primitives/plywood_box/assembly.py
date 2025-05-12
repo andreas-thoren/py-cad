@@ -5,9 +5,9 @@ from .project_data import Part, PART_TYPE_MAP
 
 
 class Assembler(AssemblerABC):
-    _BuilderClass = Builder
-    _PartEnum = Part
-    _part_type_map = PART_TYPE_MAP
+    BuilderClass = Builder
+    parts = Part
+    part_map = PART_TYPE_MAP
 
     # pylint: disable=too-many-arguments, too-many-positional-arguments
     def __init__(

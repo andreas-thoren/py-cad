@@ -1,3 +1,11 @@
+"""
+Base classes and utilities for part and assembly modeling using CadQuery.
+
+Design note:
+All part and metadata keys are internally normalized to lowercase strings.
+This allows both str and StrEnum values to be used interchangeably in external APIs.
+"""
+
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
@@ -61,24 +69,30 @@ class DimensionDataMixin:
 
 
 class ResolveMixin:
+    """Ger metoder för att normalisera strängar och dict-nycklar/värden."""
 
     @staticmethod
-    def _normalize_item(item: str | StrEnum) -> str:
+    def normalize(item: str | StrEnum) -> str:
         return item.strip().lower()
 
-    @staticmethod
-    def _normalize_items(items: Iterable[str] | type[StrEnum]) -> set[str]:
+    @classmethod
+    def normalize_all(cls, items: Iterable[str | StrEnum]) -> set[str]:
         # TODO add logic for raising errors when collisions both before and after normalization
-        return {ResolveMixin._normalize_item(item) for item in items}
+        return {cls.normalize(i) for i in items}
+
+    @classmethod
+    def normalize_map(
+        cls, mapping: dict[str | StrEnum, str | StrEnum]
+    ) -> dict[str, str]:
+        return {cls.normalize(k): cls.normalize(v) for k, v in mapping.items()}
 
     @classmethod
     def _resolve_items(
         cls, initial_attr_name: str, new_attr_name: str, resolved_attr_name: str
     ) -> frozenset[str]:
         items = cls.__dict__.get(initial_attr_name)
-
         if items:
-            return frozenset(cls._normalize_items(items))
+            return frozenset(cls.normalize_all(items))
 
         # # TODO Fix so that it works for multiple inheritance
         parent_items = None
@@ -86,22 +100,14 @@ class ResolveMixin:
             if hasattr(base, resolved_attr_name):
                 parent_items = getattr(base, resolved_attr_name)
                 break
-
         if parent_items is None:
             raise ValueError(
                 "If not subclassing concrete Builder classes must define 'part_types'."
             )
 
         new_items = cls.__dict__.get(new_attr_name)
-        new_items = cls._normalize_items(new_items) if new_items is not None else set()
+        new_items = cls.normalize_all(new_items) if new_items is not None else set()
         return frozenset(parent_items | new_items)
-
-    @classmethod
-    def _resolve_dict(cls, dct: dict) -> dict:
-        return {
-            cls._normalize_item(key): cls._normalize_item(val)
-            for key, val in dct.items()
-        }
 
 
 class BuilderABC(DimensionDataMixin, ResolveMixin, ABC):
@@ -110,6 +116,8 @@ class BuilderABC(DimensionDataMixin, ResolveMixin, ABC):
 
     Subclasses must:
         1. Define part_types (Iterable[str] | type[StrEnum]).
+           new_part_types can be defined instead of part_types if subclassing concrete
+           Builder classes and you want to keep part_types defined in parents.
         2. Implement build methods for each part type.
         3. Register each build method using @BuilderABC.register(part_type).
 
@@ -118,10 +126,12 @@ class BuilderABC(DimensionDataMixin, ResolveMixin, ABC):
         2. Start by calling super().__init__(dimension_data) before custom logic.
     """
 
-    part_types: Iterable[str] | type[StrEnum]
-    new_part_types: Iterable[str] | type[StrEnum]
     # attributes in _setup_attributes are only used during __init_subclass__. Deleted.
     _setup_attributes = ("part_types", "new_part_types")
+    part_types: Iterable[str] | type[StrEnum]
+    new_part_types: Iterable[str] | type[StrEnum]
+
+    # Resolved attributes. Dynamically assigned in __init_subclass__
     _resolved_part_types: frozenset[str]
     _builder_map: dict[str, Callable]
 
@@ -145,7 +155,7 @@ class BuilderABC(DimensionDataMixin, ResolveMixin, ABC):
         child_builder_map = {}
         for attr in cls.__dict__.values():
             if callable(attr) and hasattr(attr, "_registered_part_type"):
-                part_type = cls._normalize_item(attr._registered_part_type)
+                part_type = cls.normalize(attr._registered_part_type)
                 child_builder_map[part_type] = attr
 
         # Current class_builder_map is the combined map, child definitions win if collisions.
@@ -183,13 +193,14 @@ class BuilderABC(DimensionDataMixin, ResolveMixin, ABC):
         Returns:
             cadquery.Workplane or cadquery.Solid.
         """
-        part_type = self._normalize_item(part_type)
+        key = self.normalize(part_type)
 
         try:
-            build_func = self._builder_map[part_type]
+            build_func = self._builder_map[key]
         except KeyError as exc:
             raise ValueError(
-                f"Invalid part type: {part_type}. Available: {list(self._builder_map.keys())}"
+                f"Invalid part type: {part_type}! (normalized to '{key}'). "
+                f"Available: {list(self._builder_map.keys())}"
             ) from exc
 
         if cached_solid:
@@ -228,9 +239,11 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
     Abstract base class for all Assemblers.
 
     Subclasses must:
-        1. Define cls.BuilderClass (subclass of BuilderABC).
-        2. Define cls.parts or cls.new_parts (only if inheriting from other concrete Builder)
-        3. Define cls.part_map which should be a dict mapping part: part_type (Builder).
+        1. Define BuilderClass (subclass of BuilderABC).
+        2. Define parts (Iterable[str] | type[StrEnum]).
+           new_parts can be defined instead of parts if subclassing concrete
+           Assembler classes and you want to keep parts defined in parents.
+        3. Define part_map which should be a dict mapping part: part_type (Builder).
         4. Implement method get_metadata_map which should returns
            metadata for each part specified in parts.
 
@@ -239,12 +252,14 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
         part_map should be omitted and will default to identity mapping.
     """
 
+    # attributes in _setup_attributes are only used during __init_subclass__. Deleted.
+    _setup_attributes = ("parts", "new_parts", "part_map", "BuilderClass")
     parts: Iterable[str] | type[StrEnum]
     new_parts: Iterable[str] | type[StrEnum]
     part_map: dict[str | StrEnum, str | StrEnum]
     BuilderClass: type[BuilderABC]
-    # attributes in _setup_attributes are only used during __init_subclass__. Deleted.
-    _setup_attributes = ("parts", "new_parts", "part_map", "BuilderClass")
+
+    # Resolved attributes. Dynamically assigned in __init_subclass__
     _resolved_parts: frozenset[str]
     _resolved_part_map: dict[str, str]
     _BuilderClass: type[BuilderABC]
@@ -282,7 +297,7 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
                 raise TypeError(f"{cls.__name__} must define part_map as a dict.")
 
             # Validate keys of cls.part_map
-            cls._resolved_part_map = cls._resolve_dict(cls.part_map)
+            cls._resolved_part_map = cls.normalize_map(cls.part_map)
             actual_keys = frozenset(cls._resolved_part_map.keys())
             expected_keys = cls._resolved_parts
             if actual_keys != expected_keys:
@@ -320,7 +335,7 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
         self.builder = self._BuilderClass(dimension_data)
 
     @abstractmethod
-    def get_metadata_map(self) -> dict[StrEnum, dict]:
+    def get_metadata_map(self) -> dict[str | StrEnum, dict]:
         """Return metadata for each part in parts"""
 
     def _get_assembly_data(
@@ -351,7 +366,7 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
             cadquery.Assembly
         """
         assembly_parts = (
-            self._normalize_items(assembly_parts)
+            self.normalize_all(assembly_parts)
             if assembly_parts
             else self._resolved_parts
         )
