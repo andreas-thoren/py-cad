@@ -130,14 +130,14 @@ class ResolveMixin:
                 parent_items = older_parent_items | parent_items
 
         # Not explicitly defining items is only valid in inheritance scenarios
-        if not parent_items:
+        if parent_items is None:
             raise ValueError(
                 f"If not subclassing concrete classes must define '{initial_attr_name}'."
             )
 
         # Normalize new_items if they exist
         new_items = cls.__dict__.get(new_attr_name)
-        new_items = normalize_func(new_items) if new_items else type(items)()
+        new_items = normalize_func(new_items) if new_items else type(parent_items)()
 
         # Return the combined items datatype from parent_items and new items.
         # New items will 'win' if collisions
@@ -421,7 +421,9 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
             data.append((solid, metadata))
         return data
 
-    def assemble(self, assembly_parts: Iterable[str | StrEnum] | None = None) -> cq.Assembly:
+    def assemble(
+        self, assembly_parts: Iterable[str | StrEnum] | None = None
+    ) -> cq.Assembly:
         """
         Build an assembly from specified parts.
 
