@@ -136,11 +136,12 @@ class ResolveMixin:
             )
 
         new_items = cls.__dict__.get(new_attr_name)
-        if new_items is not None:
-            # Return the combined items datatype from parent_items and new items.
-            # New items will 'win' if collisions
-            return parent_items | normalize_func(new_items)
-        return parent_items
+        if new_items is None:
+            return parent_items
+
+        # Return the combined items datatype from parent_items and new items.
+        # New items will 'win' if collisions
+        return parent_items | normalize_func(new_items)
 
 
 class BuilderABC(DimensionDataMixin, ResolveMixin, ABC):
