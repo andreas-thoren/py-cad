@@ -76,7 +76,7 @@ class ResolveMixin:
         return item.strip().lower()
 
     @classmethod
-    def normalize_all(cls, items: Iterable[str | StrEnum]) -> set[str]:
+    def normalize_all(cls, items: Iterable[str | StrEnum] | type[StrEnum]) -> set[str]:
         # TODO add logic for raising errors when collisions both before and after normalization
         return {cls.normalize(i) for i in items}
 
@@ -87,27 +87,50 @@ class ResolveMixin:
         return {cls.normalize(k): cls.normalize(v) for k, v in mapping.items()}
 
     @classmethod
-    def _resolve_items(
-        cls, initial_attr_name: str, new_attr_name: str, resolved_attr_name: str
-    ) -> frozenset[str]:
-        items = cls.__dict__.get(initial_attr_name)
-        if items:
-            return frozenset(cls.normalize_all(items))
+    def _dummy_normalize(cls, items):
+        return items
 
-        # # TODO Fix so that it works for multiple inheritance
-        parent_items = None
+    @classmethod
+    def _resolve_items(
+        cls,
+        initial_attr_name: str,
+        new_attr_name: str,
+        resolved_attr_name: str,
+        normalize: bool = True,
+    ) -> set[str] | dict[str, str]:
+        items = cls.__dict__.get(initial_attr_name)
+        items_is_dict = isinstance(items, dict)
+
+        # Decide normalization behavior depending on datatype and value of normalize arg
+        if normalize:
+            normalize_func = cls.normalize_map if items_is_dict else cls.normalize_all
+        else:
+            normalize_func = cls._dummy_normalize
+
+        # If explicitly defined items (no inheritance) return after normalization
+        if items:
+            return normalize_func(items)
+
+        # Loop through ancester creating parent_items
+        parent_items = type(items)()
         for base in cls.__mro__[1:]:
             if hasattr(base, resolved_attr_name):
-                parent_items = getattr(base, resolved_attr_name)
-                break
-        if parent_items is None:
+                # Younger parents come first in mro and should override older parents
+                parent_items = getattr(base, resolved_attr_name) | parent_items
+
+        # Not explicitly defining items is only valid in inheritance scenarios
+        if not parent_items:
             raise ValueError(
-                "If not subclassing concrete Builder classes must define 'part_types'."
+                f"If not subclassing concrete classes must define '{initial_attr_name}'."
             )
 
+        # Normalize new_items if they exist
         new_items = cls.__dict__.get(new_attr_name)
-        new_items = cls.normalize_all(new_items) if new_items is not None else set()
-        return frozenset(parent_items | new_items)
+        new_items = normalize_func(new_items) if new_items else type(items)()
+
+        # Return the combined items datatype from parent_items and new items.
+        # New items will 'win' if collisions
+        return parent_items | new_items
 
 
 class BuilderABC(DimensionDataMixin, ResolveMixin, ABC):
@@ -143,8 +166,8 @@ class BuilderABC(DimensionDataMixin, ResolveMixin, ABC):
         super().__init_subclass__(**kwargs)
 
         # Resolve (normalize and add parent part_types) through resolve_items
-        cls._resolved_part_types = cls._resolve_items(
-            "part_types", "new_part_types", "_resolved_part_types"
+        cls._resolved_part_types = frozenset(
+            cls._resolve_items("part_types", "new_part_types", "_resolved_part_types")
         )
 
         # TODO validate that below inheritance fetching works
@@ -253,15 +276,27 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
     """
 
     # attributes in _setup_attributes are only used during __init_subclass__. Deleted.
-    _setup_attributes = ("parts", "new_parts", "part_map", "BuilderClass")
+    _setup_attributes = (
+        "parts",
+        "new_parts",
+        "part_map",
+        "new_part_map",
+        "metadata_map",
+        "new_metadata_map"
+        "BuilderClass",
+    )
     parts: Iterable[str] | type[StrEnum]
     new_parts: Iterable[str] | type[StrEnum]
     part_map: dict[str | StrEnum, str | StrEnum]
+    new_part_map: dict[str | StrEnum, str | StrEnum]
+    metadata_map: dict[str | StrEnum, dict]
+    new_metadata_map: dict[str | StrEnum, dict]
     BuilderClass: type[BuilderABC]
 
     # Resolved attributes. Dynamically assigned in __init_subclass__
     _resolved_parts: frozenset[str]
     _resolved_part_map: dict[str, str]
+    _resolved_metadata_map: dict[str | StrEnum, dict]
     _BuilderClass: type[BuilderABC]
 
     @property
@@ -271,8 +306,8 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         # Resolve (normalize and add parent parts) through resolve_items
-        cls._resolved_parts = cls._resolve_items(
-            "parts", "new_parts", "_resolved_parts"
+        cls._resolved_parts = frozenset(
+            cls._resolve_items("parts", "new_parts", "_resolved_parts")
         )
 
         # Check that BuilderClass is correct, move to private attribute.
@@ -297,7 +332,9 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
                 raise TypeError(f"{cls.__name__} must define part_map as a dict.")
 
             # Validate keys of cls.part_map
-            cls._resolved_part_map = cls.normalize_map(cls.part_map)
+            cls._resolved_part_map = cls._resolve_items(
+                "part_map", "new_part_map", "_resolved_part_map"
+            )
             actual_keys = frozenset(cls._resolved_part_map.keys())
             expected_keys = cls._resolved_parts
             if actual_keys != expected_keys:
@@ -365,8 +402,8 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
         Returns:
             cadquery.Assembly
         """
-        assembly_parts = (
-            self.normalize_all(assembly_parts)
+        assembly_parts: frozenset[str] = (
+            frozenset(self.normalize_all(assembly_parts))
             if assembly_parts
             else self._resolved_parts
         )
