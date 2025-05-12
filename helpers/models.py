@@ -92,7 +92,7 @@ class ResolveMixin:
         return {cls.normalize(k): v for k, v in mapping.items()}
 
     @classmethod
-    def _indentity(cls, items):
+    def _identity(cls, items):
         return items
 
     @classmethod
@@ -110,7 +110,7 @@ class ResolveMixin:
         if normalize:
             normalize_func = cls.normalize_map if items_is_dict else cls.normalize_all
         else:
-            normalize_func = cls._indentity
+            normalize_func = cls._identity
 
         # If explicitly defined items (no inheritance) return after normalization
         if items:
@@ -135,13 +135,12 @@ class ResolveMixin:
                 f"If not subclassing concrete classes must define '{initial_attr_name}'."
             )
 
-        # Normalize new_items if they exist
         new_items = cls.__dict__.get(new_attr_name)
-        new_items = normalize_func(new_items) if new_items else type(parent_items)()
-
-        # Return the combined items datatype from parent_items and new items.
-        # New items will 'win' if collisions
-        return parent_items | new_items
+        if new_items is not None:
+            # Return the combined items datatype from parent_items and new items.
+            # New items will 'win' if collisions
+            return parent_items | normalize_func(new_items)
+        return parent_items
 
 
 class BuilderABC(DimensionDataMixin, ResolveMixin, ABC):
