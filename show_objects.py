@@ -31,10 +31,9 @@ def show_generic_box_part():
 
 def show_test_project():
     from tests.test_project.project_data import DIMENSION_DATA, Part
-    from tests.test_project.parts import CompleteBuilder
-    from tests.test_project.assembly import CompleteAssembler
+    from tests.test_project.assembly import PartialAssemblerLeaf
 
-    assembler = CompleteAssembler(DIMENSION_DATA)
+    assembler = PartialAssemblerLeaf(DIMENSION_DATA)
     assembly_parts = [Part.BOTTOM, Part.LONG_SIDE, Part.SHORT_SIDE]
     # assembly = assembler.assemble(assembly_parts)
     assembly = assembler.assemble()

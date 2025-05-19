@@ -317,21 +317,18 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
             )
         cls._BuilderClass = cls.BuilderClass
 
-        # Identity map shortcut for _resolved_part_map
-        if cls._resolved_parts == cls._BuilderClass._resolved_part_types:
-            if hasattr(cls, "part_map"):
-                raise ValueError(
-                    f"{cls.__name__}: should not define part_map when "
-                    "parts == _BuilderClass.part_types"
-                )
-            cls._resolved_part_map = {part: part for part in cls._resolved_parts}
-        else:  # Validate part_map
-            if not hasattr(cls, "part_map") or not isinstance(cls.part_map, dict):
-                raise TypeError(f"{cls.__name__} must define part_map as a dict.")
+        # Validate correct part_map if not using identity map
+        if hasattr(cls, "part_map"):
+            if not isinstance(cls.part_map, dict):
+                raise TypeError(f"{cls.__name__} part_map must be a dict.")
 
-            # Validate keys of cls.part_map
             cls._resolved_part_map = cls.resolve_items("part_map", "_resolved_part_map")
             cls._validate_resolved_part_map()
+        elif cls._resolved_parts == cls._BuilderClass._resolved_part_types:
+            # Identity map shortcut for _resolved_part_map
+            cls._resolved_part_map = {part: part for part in cls._resolved_parts}
+        else:
+            raise TypeError(f"{cls.__name__} must define part_map as a dict.")
 
         # Delete class attributes only used for subclass setup
         for attr in cls._setup_attributes:
