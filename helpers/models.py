@@ -57,12 +57,18 @@ class DimensionDataMixin:
 
     def __getattr__(self, name):
         """Delegate missing attributes to self._dimension_data."""
+
         try:
-            return getattr(self._dimension_data, name)
+            dimension_data = object.__getattribute__(self, "_dimension_data")
         except AttributeError:
-            raise AttributeError(
-                f"'{self.__class__.__name__}' object has no attribute '{name}'"
-            ) from None
+            pass
+        else:
+            if hasattr(dimension_data, name):
+                return getattr(dimension_data, name)
+
+        raise AttributeError(
+            f"'{self.__class__.__name__}' object has no attribute '{name}'"
+        ) from None
 
 
 class ResolveMixin:
