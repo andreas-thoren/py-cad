@@ -1,9 +1,5 @@
 """
 Base classes and utilities for part and assembly modeling using CadQuery.
-
-Design note:
-All part and metadata keys are internally normalized to lowercase strings.
-This allows both str and StrEnum values to be used interchangeably in external APIs.
 """
 
 from abc import ABC, abstractmethod
@@ -70,7 +66,7 @@ class DimensionDataMixin:
 
 
 class ResolveMixin:
-    """Ger metoder för att normalisera strängar och dict-nycklar/värden."""
+    """Provides methods for normalizing strings and dictionary keys/values."""
 
     @staticmethod
     def normalize(item: str) -> str:
@@ -149,8 +145,6 @@ class BuilderABC(DimensionDataMixin, ResolveMixin, ABC):
 
     Subclasses must:
         1. Define part_types (Iterable[str] | type[StrEnum]).
-           new_part_types can be defined instead of part_types if subclassing concrete
-           Builder classes and you want to keep part_types defined in parents.
         2. Implement build methods for each part type.
         3. Register each build method using @BuilderABC.register(part_type).
 
@@ -269,15 +263,13 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
     Subclasses must:
         1. Define BuilderClass (subclass of BuilderABC).
         2. Define parts (Iterable[str] | type[StrEnum]).
-           new_parts can be defined instead of parts if subclassing concrete
-           Assembler classes and you want to keep parts defined in parents.
         3. Define part_map which should be a dict mapping part: part_type (Builder).
         4. Implement method get_metadata_map which should returns
            metadata for each part specified in parts.
 
     Shortcut:
         If parts is identical to BuilderClass.part_types,
-        part_map should be omitted and will default to identity mapping.
+        part_map can be omitted and will default to identity mapping.
     """
 
     # attributes in _setup_attributes are only used during __init_subclass__. Deleted.

@@ -1,67 +1,80 @@
 # Athor Sketches
 
-Repository containing my CadQuery sketches and designs, primarily intended for woodworking and related projects.
+Repository containing my CadQuery sketches and parametric designs, primarily intended for woodworking and related projects.
+All projects use a shared, extensible part/assembly model defined in `helpers/models.py`.
 
 ---
 
-## Creating a New Project
+## Design Philosophy
 
-Follow these steps to create a new CadQuery project using the shared model framework defined in `helpers/models.py`.
+All **part names** and **metadata keys** are normalized to lowercase strings internally.
+**Both `str` and `StrEnum`** (or other string-like enums) are accepted in external APIs and project definitions.
+This approach allows projects to choose the most readable and maintainable interface, while ensuring robust internal handling.
 
-Each project directory (e.g., `garbage_sort_box/`) typically contains:
+---
 
-* `project_data.py` — dimensions, enums, and part mappings
-* `parts.py` — subclass of `BuilderABC` for generating parts
-* `assembly.py` — subclass of `AssemblerABC` for combining parts
+## Project Structure
 
-Typical project structure:
-```text
-your_project
-├── assembly.py
-├── parts.py
-├── project_data.py
+A typical project directory (e.g., `garbage_sort_box/`) contains:
+
+```
+your_project/
+├── project_data.py    # Defines enums/part names, dimension data, mappings
+├── parts.py           # Subclass of BuilderABC for part generation
+└── assembly.py        # Subclass of AssemblerABC for assembly logic
 ```
 
 ---
 
-### Step 1: Define Part, PartType, and optionally PART_TYPE_MAP; create a DimensionData instance
+## Getting Started: Creating a New Project
+
+### 1. Define Parts, Part Types, and Dimensions
 
 In `project_data.py`, define:
 
-* `Part` (StrEnum) — unique parts used in the final assembly (may include mirrored or variant instances)
-* `PartType` (StrEnum) — distinct shape templates needed to build those parts
-* `PART_TYPE_MAP` (dict[Part, PartType]) — Can be defined here or directly at the _part_type_map of the AssemblerABC subclass definition.
+* **`Part`** — all unique parts in the assembly (`StrEnum` or list of strings)
+* **`PartType`** — unique part templates (can be same as `Part` if 1:1)
+* **`PART_MAP`** — mapping from `Part` to `PartType` (omit if 1:1)
+* **`DIMENSION_DATA`** — a `DimensionData` instance (subclass if you need more fields)
+
+**Example:**
 
 ```python
-from enum import StrEnum, auto
+from enum import StrEnum
 from helpers.models import DimensionData
 
 class Part(StrEnum):
-    BOTTOM = auto()
-    LEFT_SIDE = auto()
-    RIGHT_SIDE = auto()
+    BOTTOM = "bottom"
+    LEFT_SIDE = "left_side"
+    RIGHT_SIDE = "right_side"
 
 class PartType(StrEnum):
-    BOTTOM = auto()
-    SIDE_PANEL = auto()
+    BOTTOM = "bottom"
+    SIDE_PANEL = "side_panel"
 
-PART_TYPE_MAP = {
+PART_MAP = {
     Part.BOTTOM: PartType.BOTTOM,
     Part.LEFT_SIDE: PartType.SIDE_PANEL,
     Part.RIGHT_SIDE: PartType.SIDE_PANEL,
 }
 
-DIMENSION_DATA = DimensionData(x_length=400, y_length=300, z_length=250, material_thickness=12)
+DIMENSION_DATA = DimensionData(
+    x_length=400, y_length=300, z_length=250, material_thickness=12
+)
 ```
-For advanced customization, you may subclass `DimensionData` if extra dimension fields are needed.
 
-💡 If your project has a 1-to-1 mapping between `Part` and `PartType`, you may skip `PartType` and `PART_TYPE_MAP` and assign `Part` to both `_PartEnum` (AssemblerABC subclass) and `_PartTypeEnum` (BuilderABC subclass) in which case identity mapping is applied automatically by the assembler.
+**Note:**
+You can also use an interable of plain strings for `Part`/`PartType` and the corresponding strings for `PART_MAP`.
+If all your parts have a unique template, just set `parts` and `part_types` to the same StrEnum class (or Iterable) and skip `PART_MAP`.
 
 ---
 
-### Step 2: Define a Builder Subclass
+### 2. Implement the Builder
 
-In `parts.py`, subclass `BuilderABC` and define one method per `PartType`. Register each build method using the `@BuilderABC.register(...)` decorator.
+In `parts.py`, subclass `BuilderABC` and define a **build method for each part type**.
+Register each method with `@BuilderABC.register(...)`.
+
+**Example:**
 
 ```python
 import cadquery as cq
@@ -69,7 +82,7 @@ from helpers.models import BuilderABC, DimensionData
 from .project_data import PartType
 
 class Builder(BuilderABC):
-    _PartTypeEnum = PartType
+    part_types = PartType
 
     def __init__(self, dimension_data: DimensionData):
         super().__init__(dimension_data)
@@ -84,37 +97,38 @@ class Builder(BuilderABC):
         return cq.Workplane("XZ").box(self.x_length, self.z_length, self.material_thickness)
 ```
 
-Thanks to `DimensionDataMixin`, you can access dimension values (`self.x_length`, `self.z_offset`, etc.), from the DimensionData instance directly in BuilderABC subclasses.
+You can access dimension values (`self.x_length`, `self.z_length`, etc.) directly, thanks to `DimensionDataMixin`.
 
 ---
 
-### Step 3: Define an Assembler Subclass
+### 3. Implement the Assembler
 
-In `assembly.py`, subclass `AssemblerABC`. Specify:
+In `assembly.py`, subclass `AssemblerABC`:
 
-* `_BuilderClass` — the builder class you just created
-* `_PartEnum` — your `Part` enum
-* `_part_type_map` — mapping from `Part` to `PartType` (omit if 1-to-1 mapping, see Step 1)
+* Set `BuilderClass` to your builder class
+* Set `parts` (your `Part` enum or list of strings)
+* Optionally set `part_map` (mapping part → part\_type; omit if 1:1)
+* Implement `get_metadata_map` (placement/color/etc for each part)
 
-You must also implement `get_metadata_map`, which controls placement and metadata of parts in the final assembly.
+**Example:**
 
 ```python
 import cadquery as cq
 from helpers.models import AssemblerABC, DimensionData
 from .parts import Builder
-from .project_data import Part, PART_TYPE_MAP
+from .project_data import Part, PART_MAP
 
 class Assembler(AssemblerABC):
-    _BuilderClass = Builder
-    _PartEnum = Part
-    _part_type_map = PART_TYPE_MAP.copy()
+    BuilderClass = Builder
+    parts = Part
+    part_map = PART_MAP  # Omit if parts == part_types
 
     def __init__(self, dimension_data: DimensionData):
         super().__init__(dimension_data)
         self.x_offset = self.x_length / 2
         self.z_offset = self.z_length / 2
 
-    def get_metadata_map(self) -> dict[Part, dict]:
+    def get_metadata_map(self) -> dict:
         return {
             Part.BOTTOM: {
                 "loc": cq.Location((0, 0, 0)),
@@ -131,81 +145,92 @@ class Assembler(AssemblerABC):
         }
 ```
 
+If your project has a **1:1 mapping** between parts and part types, just omit `part_map` and set parts = PartType.
 Thanks to `DimensionDataMixin`, you can access dimension values (`self.x_length`, `self.z_offset`, etc.), from the DimensionData instance directly in AssemblerABC subclasses.
 
 ---
 
-### Step 4: Visualize in CadQuery
+### 4. Visualize Your Model in CadQuery
 
-To preview your parts or the full assembly:
+Preview parts or assemblies using `show_object`:
 
 ```python
-from projects.my_box.project_data import DIMENSION_DATA
-from projects.my_box.parts import Builder, Part
+from projects.my_box.project_data import DIMENSION_DATA, Part
+from projects.my_box.parts import Builder
 from projects.my_box.assembly import Assembler
 
 # Show a single part
 show_object(Builder.get_part(DIMENSION_DATA, Part.BOTTOM), name="Bottom")
 
-# Show entire assembly
+# Show the full assembly
 show_object(Assembler.get_assembly(DIMENSION_DATA), name="Full Assembly")
 ```
 
 ---
 
-## Project Setup (Python Environment)
+## Project Setup
 
-Follow these instructions to set up your Python virtual environment correctly for working with this repository.
+### 1. Create a Virtual Environment
 
-### Step 1: Create a virtual environment
-
-Use Python ≥3.9 and <3.13 (currently using 3.12):
+Use Python 3.9–3.12:
 
 ```bash
 python3.12 -m venv .venv
 ```
 
-### Step 2: Activate the environment
+### 2. Activate the Environment
 
-* **macOS/Linux**
+* **macOS/Linux:**
+  `source .venv/bin/activate`
+* **Windows (PowerShell):**
+  `.\.venv\Scripts\Activate.ps1`
 
-```bash
-source .venv/bin/activate
-```
-
-* **Windows (PowerShell)**
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-### Step 3: Upgrade pip
+### 3. Upgrade pip
 
 ```bash
 pip install --upgrade pip
 ```
 
-### Step 4: Install the project in editable mode
-
-(This reads `pyproject.toml` and installs dependencies.)
+### 4. Install in Editable Mode
 
 ```bash
 pip install -e .
 ```
 
-### Step 5: Verify the installation
+### 5. Verify
 
 ```bash
-python --version    # Should display 3.12.x
-pip list            # Should list cadquery, CQ-editor, etc.
+python --version    # Should be 3.12.x
+pip list            # Should include cadquery, etc.
 ```
 
+---
+
+## Advanced Tips
+
+* **Subclasses:** You can subclass `DimensionData` if you need more fields for your project.
+* **Strings or Enums:** All parts, part types, and mappings may be defined as plain strings or as `StrEnum` members.
+* **Inheritance:** Builder and Assembler classes support inheritance; all attributes are internally normalized and resolved.
+* **Error messages:** If mappings are incomplete or inconsistent, detailed error messages are provided at class creation time.
+
+---
+
+## Contributing
+
+Feel free to fork and adapt the models for your own projects.
+Feedback, issues, and pull requests are welcome!
+
+---
+
 ## TODO
-- Temporarily inactivate inheritance by putting logic in its own method that returns immediatly
-- Normalize access methods like build_part and assemble.
-- Rename _part_type_map to part_type_map and normalize in subclass init. Resolve and put in _resolved_part_type_map. Make property for access.
-- _part_type_map -> part_type_map. Internally normalized and stored in _part_type_map. part_type_map is then deleted.
-- Replace enums for iterable of strings (or if user wants StrEnum) thats internally normalized and cast to a set. Will apply both to builder part_types and assembler parts.
-- Add logic to NormalizationMixin that raises if collisions both before and after normalization.
-- Fix inheritance
-- Create descriptor for class variables only used for class setup and then deleted
+
+* Add stricter normalization collision checks in `ResolveMixin`
+* Add class-level descriptors to signal configuration-only attributes after subclass creation
+* Normalize all external API methods to accept both `str` and `StrEnum` for maximum flexibility
+
+---
+
+**Happy sketching!**
+— Andreas (Athor)
+
+---
