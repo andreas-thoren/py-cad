@@ -95,7 +95,7 @@ class PartialBuilderBase(BuilderABC):
 
 
 class PartialBuilderMid(PartialBuilderBase):
-    new_part_types = [PartType.LONG_SIDE_PANEL]
+    part_types = [PartType.LONG_SIDE_PANEL]
 
     @BuilderABC.register(PartType.LONG_SIDE_PANEL)
     def get_long_side_panel(self, invert_grooves=False) -> cq.Workplane:
@@ -120,7 +120,7 @@ class PartialBuilderMid(PartialBuilderBase):
 
 
 class PartialBuilderLeaf(PartialBuilderMid):
-    new_part_types = [PartType.SHORT_SIDE_PANEL]
+    part_types = [PartType.SHORT_SIDE_PANEL]
 
     @BuilderABC.register(PartType.SHORT_SIDE_PANEL)
     def get_short_side_panel(self) -> cq.Workplane:

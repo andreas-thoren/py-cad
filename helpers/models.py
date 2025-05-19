@@ -21,7 +21,7 @@ class DimensionData:
     x_length: int | float
     y_length: int | float
     z_length: int | float
-    material_thickness: int | float | dict[StrEnum, int | float]
+    material_thickness: int | float | dict[str, int | float]
 
 
 class DimensionDataMixin:
@@ -46,7 +46,7 @@ class DimensionDataMixin:
             return material_thickness.copy()
         return material_thickness
 
-    def get_part_thickness(self, part_type: StrEnum) -> int | float:
+    def get_part_thickness(self, part_type: str) -> int | float:
         """Get the thickness of a specific part."""
         material_thickness = self._dimension_data.material_thickness
         if isinstance(material_thickness, dict):
@@ -73,53 +73,40 @@ class ResolveMixin:
     """Ger metoder för att normalisera strängar och dict-nycklar/värden."""
 
     @staticmethod
-    def normalize(item: str | StrEnum) -> str:
+    def normalize(item: str) -> str:
         return item.strip().lower()
 
     @classmethod
-    def normalize_all(cls, items: Iterable[str | StrEnum] | type[StrEnum]) -> set[str]:
+    def normalize_all(cls, items: Iterable[str] | type[StrEnum]) -> set[str]:
         # TODO add logic for raising errors when collisions both before and after normalization
         return {cls.normalize(i) for i in items}
 
     @classmethod
-    def normalize_map(
-        cls, mapping: dict[str | StrEnum, str | StrEnum]
-    ) -> dict[str, str]:
+    def normalize_map(cls, mapping: dict[str, str]) -> dict[str, str]:
         return {cls.normalize(k): cls.normalize(v) for k, v in mapping.items()}
 
     @classmethod
-    def normalize_keys(cls, mapping: dict[str | StrEnum, Any]) -> dict[str, Any]:
+    def normalize_keys(cls, mapping: dict[str, Any]) -> dict[str, Any]:
         return {cls.normalize(k): v for k, v in mapping.items()}
 
     @classmethod
-    def _identity(cls, items):
-        return items
+    def normalize_items(
+        cls, items: set[str] | dict[str, str]
+    ) -> set[str] | dict[str, str]:
+        normalize_func = (
+            cls.normalize_map if isinstance(items, dict) else cls.normalize_all
+        )
+        return normalize_func(items)
 
     @classmethod
-    def _resolve_items(
+    def get_parent_items(
         cls,
-        initial_attr_name: str,
-        new_attr_name: str,
-        resolved_attr_name: str,
-        normalize: bool = True,
-    ) -> set[str] | dict[str, str]:
-        items = cls.__dict__.get(initial_attr_name)
-        items_is_dict = isinstance(items, dict)
-
-        # Decide normalization behavior depending on datatype and value of normalize arg
-        if normalize:
-            normalize_func = cls.normalize_map if items_is_dict else cls.normalize_all
-        else:
-            normalize_func = cls._identity
-
-        # If explicitly defined items (no inheritance) return after normalization
-        if items:
-            return normalize_func(items)
-
+        attr_name: str,
+    ) -> set[str] | dict[str, str] | None:
         # Loop through ancestors creating parent_items
         parent_items = None
         for base in cls.__mro__[1:]:
-            older_parent_items = getattr(base, resolved_attr_name, None)
+            older_parent_items = getattr(base, attr_name, None)
             if older_parent_items is None:
                 continue
 
@@ -129,19 +116,31 @@ class ResolveMixin:
                 # Younger parents come first in mro and should override older parents
                 parent_items = older_parent_items | parent_items
 
-        # Not explicitly defining items is only valid in inheritance scenarios
-        if parent_items is None:
-            raise ValueError(
-                f"If not subclassing concrete classes must define '{initial_attr_name}'."
-            )
+        return parent_items
 
-        new_items = cls.__dict__.get(new_attr_name)
-        if new_items is None:
+    @classmethod
+    def resolve_items(
+        cls,
+        attr_name: str,
+        resolved_attr_name: str,
+        normalize: bool = True,
+    ) -> set[str] | dict[str, str]:
+
+        parent_items = cls.get_parent_items(resolved_attr_name)
+        items = cls.__dict__.get(attr_name)
+
+        if items is None:
+            if parent_items is None:
+                raise ValueError(
+                    f"{cls.__name__} must define {attr_name} if not inheriting from a concrete class that does."
+                )
             return parent_items
+
+        items = cls.normalize_items(items) if normalize else items
 
         # Return the combined items datatype from parent_items and new items.
         # New items will 'win' if collisions
-        return parent_items | normalize_func(new_items)
+        return parent_items | items if parent_items is not None else items
 
 
 class BuilderABC(DimensionDataMixin, ResolveMixin, ABC):
@@ -160,10 +159,7 @@ class BuilderABC(DimensionDataMixin, ResolveMixin, ABC):
         2. Start by calling super().__init__(dimension_data) before custom logic.
     """
 
-    # attributes in _setup_attributes are only used during __init_subclass__. Deleted.
-    _setup_attributes = ("part_types", "new_part_types")
     part_types: Iterable[str] | type[StrEnum]
-    new_part_types: Iterable[str] | type[StrEnum]
 
     # Resolved attributes. Dynamically assigned in __init_subclass__
     _resolved_part_types: frozenset[str]
@@ -178,12 +174,11 @@ class BuilderABC(DimensionDataMixin, ResolveMixin, ABC):
 
         # Resolve (normalize and add parent part_types) through resolve_items
         cls._resolved_part_types = frozenset(
-            cls._resolve_items("part_types", "new_part_types", "_resolved_part_types")
+            cls.resolve_items("part_types", "_resolved_part_types")
         )
 
-        # TODO validate that below inheritance fetching works
         # Make a copy of concrete parents _builder_map (if concrete parent exists)
-        parent_builder_map = getattr(cls, "_builder_map", None) or {}
+        parent_builder_map = cls.get_parent_items("_builder_map") or {}
 
         # Build the child_builder_map by scanning the class for methods with registered parts
         child_builder_map = {}
@@ -202,10 +197,9 @@ class BuilderABC(DimensionDataMixin, ResolveMixin, ABC):
                 f"{cls.__name__}._builder_map missing parts: {missing_parts}"
             )
 
-        # Delete class attributes only used for subclass setup
-        for attr in cls._setup_attributes:
-            if attr in cls.__dict__:
-                delattr(cls, attr)
+        # Delete "part_types" which is only used for subclass setup
+        if "part_types" in cls.__dict__:
+            delattr(cls, "part_types")
 
         # TODO Add descriptor so that attempted access to this attributes makes it clear
         # that they are only intended for class setup. Point to resolved_part_types!
@@ -215,7 +209,7 @@ class BuilderABC(DimensionDataMixin, ResolveMixin, ABC):
         self._solid_cache = {}
 
     def build_part(
-        self, part_type: StrEnum, cached_solid: bool = False
+        self, part_type: str, cached_solid: bool = False
     ) -> cq.Workplane | cq.Solid:
         """
         Builds the part for the given part_type.
@@ -238,9 +232,9 @@ class BuilderABC(DimensionDataMixin, ResolveMixin, ABC):
             ) from exc
 
         if cached_solid:
-            if part_type not in self._solid_cache:
-                self._solid_cache[part_type] = build_func(self).val()
-            return self._solid_cache[part_type]
+            if key not in self._solid_cache:
+                self._solid_cache[key] = build_func(self).val()
+            return self._solid_cache[key]
 
         return build_func(self)
 
@@ -250,14 +244,14 @@ class BuilderABC(DimensionDataMixin, ResolveMixin, ABC):
 
     @classmethod
     def get_part(
-        cls, dimension_data: DimensionData, part_type: StrEnum, *args, **kwargs
+        cls, dimension_data: DimensionData, part_type: str, *args, **kwargs
     ) -> cq.Workplane:
         """Convenience method to build a part without manually instantiating the builder."""
         builder = cls(dimension_data, *args, **kwargs)
         return builder.build_part(part_type)
 
     @staticmethod
-    def register(part_type: StrEnum) -> Callable:
+    def register(part_type: str) -> Callable:
         """Decorator to register build methods."""
 
         def decorator(func):
@@ -289,15 +283,11 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
     # attributes in _setup_attributes are only used during __init_subclass__. Deleted.
     _setup_attributes = (
         "parts",
-        "new_parts",
         "part_map",
-        "new_part_map",
         "BuilderClass",
     )
     parts: Iterable[str] | type[StrEnum]
-    new_parts: Iterable[str] | type[StrEnum]
-    part_map: dict[str | StrEnum, str | StrEnum]
-    new_part_map: dict[str | StrEnum, str | StrEnum]
+    part_map: dict[str, str]
     BuilderClass: type[BuilderABC]
 
     # Resolved attributes. Dynamically assigned in __init_subclass__
@@ -316,9 +306,7 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         # Resolve (normalize and add parent parts) through resolve_items
-        cls._resolved_parts = frozenset(
-            cls._resolve_items("parts", "new_parts", "_resolved_parts")
-        )
+        cls._resolved_parts = frozenset(cls.resolve_items("parts", "_resolved_parts"))
 
         # Check that BuilderClass is correct, move to private attribute.
         if not hasattr(cls, "BuilderClass") or not issubclass(
@@ -342,9 +330,7 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
                 raise TypeError(f"{cls.__name__} must define part_map as a dict.")
 
             # Validate keys of cls.part_map
-            cls._resolved_part_map = cls._resolve_items(
-                "part_map", "new_part_map", "_resolved_part_map"
-            )
+            cls._resolved_part_map = cls.resolve_items("part_map", "_resolved_part_map")
             cls._validate_resolved_part_map()
 
         # Delete class attributes only used for subclass setup
@@ -386,7 +372,7 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
         self.builder = self._BuilderClass(dimension_data)
 
     @abstractmethod
-    def get_metadata_map(self) -> dict[str | StrEnum, dict]:
+    def get_metadata_map(self) -> dict[str, dict]:
         """Return metadata for each part in parts"""
 
     def get_resolved_metadata_map(self) -> dict[str, dict[str, Any]]:
@@ -405,7 +391,7 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
         return resolved_map
 
     def _get_assembly_data(
-        self, normalized_assembly_parts: Iterable[StrEnum]
+        self, normalized_assembly_parts: Iterable[str]
     ) -> list[tuple[cq.Workplane, dict]]:
         """Helper used by 'assemble' to build parts and attach metadata."""
         data = []
@@ -421,9 +407,7 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
             data.append((solid, metadata))
         return data
 
-    def assemble(
-        self, assembly_parts: Iterable[str | StrEnum] | None = None
-    ) -> cq.Assembly:
+    def assemble(self, assembly_parts: Iterable[str] | None = None) -> cq.Assembly:
         """
         Build an assembly from specified parts.
 
@@ -449,7 +433,7 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
         cls,
         dimension_data: DimensionData,
         *args,
-        assembly_parts: Iterable[StrEnum] | None = None,
+        assembly_parts: Iterable[str] | None = None,
         **kwargs,
     ) -> cq.Assembly:
         """Convenience method to create an assembly directly."""
