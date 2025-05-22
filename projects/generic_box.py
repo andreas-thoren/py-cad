@@ -1,11 +1,40 @@
-from helpers.models import DimensionData
-from primitives.plywood_box.project_data import BoxDimensionData
+from enum import StrEnum
+from primitives.basic_box.project_data import BoxDimensionData, PartType
 
-# Project dimensions
-BOX_X = 300
+# Basic dimensions
+BOX_X = 400
 BOX_Y = 200
 BOX_Z = 200
-PLY_THICKNESS = 9
-ROUTE_DEPTH = PLY_THICKNESS / 2
 
-BOX_DIMENSIONS = BoxDimensionData(BOX_X, BOX_Y, BOX_Z, PLY_THICKNESS, ROUTE_DEPTH)
+# Materials
+class Material(StrEnum):
+    PLYWOOD = "plywood"
+    SOLID_WOOD = "solid_wood"
+
+# Material thicknesses map
+MATERIAL_THICKNESS_MAP = {
+    Material.PLYWOOD: 9,
+    Material.SOLID_WOOD: 12,
+}
+
+# Part type materials
+PART_TYPE_MATERIAL_MAP = {
+    PartType.BOTTOM: Material.PLYWOOD,
+    PartType.LONG_SIDE_PANEL: Material.SOLID_WOOD,
+    PartType.SHORT_SIDE_PANEL: Material.SOLID_WOOD,
+    PartType.TOP: Material.SOLID_WOOD,
+}
+
+# Part type thicknesses
+PART_TYPE_THICKNESS_MAP = {
+    part_type: MATERIAL_THICKNESS_MAP[material]
+    for part_type, material in PART_TYPE_MATERIAL_MAP.items()
+}
+
+# Route depth
+ROUTE_DEPTH = MATERIAL_THICKNESS_MAP[Material.SOLID_WOOD] / 2
+
+# Box dimensions
+BOX_DIMENSIONS = BoxDimensionData(
+    BOX_X, BOX_Y, BOX_Z, PART_TYPE_THICKNESS_MAP, ROUTE_DEPTH
+)
