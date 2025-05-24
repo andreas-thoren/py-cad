@@ -28,6 +28,4 @@ PART_TYPE_MAP = {
 }
 
 
-@dataclass
-class BoxDimensionData(DimensionData):
-    route_depth: int | float
+BoxDimensionData = DimensionData

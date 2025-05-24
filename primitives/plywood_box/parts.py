@@ -12,24 +12,24 @@ class Builder(BuilderABC):
     def __init__(self, dim: DimensionData):
         super().__init__(dim)
         # Calculated dimensions
-        self.top_divider_x = self.x_length - self.material_thickness
-        self.offset = self.material_thickness - self.route_depth
-        self.panel_y = self.y_length - 2 * self.offset
-        self.panel_z = self.z_length - 2 * self.offset
+        self.top_divider_x = self.dim.x_len - self.dim.material_thickness
+        self.offset = self.dim.material_thickness - self.dim.route_depth
+        self.panel_y = self.dim.y_len - 2 * self.offset
+        self.panel_z = self.dim.z_len - 2 * self.offset
 
     @BuilderABC.register(PartType.LONG_SIDE_PANEL)
     def get_long_side_panel(self, invert_grooves=False) -> cq.Workplane:
-        groove_offset = self.x_length / 2 - self.material_thickness / 2
+        groove_offset = self.dim.x_len / 2 - self.dim.material_thickness / 2
         groove_face = ">Y" if invert_grooves else "<Y"
 
         return (
             cq.Workplane("XZ")
-            .box(self.x_length, self.panel_z, self.material_thickness)
+            .box(self.dim.x_len, self.panel_z, self.dim.material_thickness)
             .faces(groove_face)
             .workplane()
             .pushPoints([(groove_offset, 0), (-groove_offset, 0)])
-            .rect(self.material_thickness, self.panel_z)
-            .cutBlind(-self.route_depth)
+            .rect(self.dim.material_thickness, self.panel_z)
+            .cutBlind(-self.dim.route_depth)
         )
 
     @BuilderABC.register(PartType.BOTTOM)
@@ -37,19 +37,19 @@ class Builder(BuilderABC):
         return (
             cq.Workplane("XY")
             .box(
-                self.x_length, self.y_length, self.material_thickness - self.route_depth
+                self.dim.x_len, self.dim.y_len, self.dim.material_thickness - self.dim.route_depth
             )
             .faces(">Z")
             .workplane()
             .rect(
-                self.x_length - self.material_thickness * 2,
-                self.y_length - self.material_thickness * 2,
+                self.dim.x_len - self.dim.material_thickness * 2,
+                self.dim.y_len - self.dim.material_thickness * 2,
             )
-            .extrude(self.route_depth)
+            .extrude(self.dim.route_depth)
         )
 
     @BuilderABC.register(PartType.SHORT_SIDE_PANEL)
     def get_short_side_panel(self) -> cq.Workplane:
         return cq.Workplane("YZ").box(
-            self.panel_y, self.panel_z, self.material_thickness
+            self.panel_y, self.panel_z, self.dim.material_thickness
         )

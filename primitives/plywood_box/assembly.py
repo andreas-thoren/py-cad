@@ -16,10 +16,10 @@ class Assembler(AssemblerABC):
         visual_offset: int = 0,
     ):
         super().__init__(dim)
-        self.x_offset = visual_offset + (self.x_length - self.material_thickness) / 2
-        self.y_offset = visual_offset + (self.y_length - self.material_thickness) / 2
-        self.z_offset = (self.z_length / 2) - (self.material_thickness - self.route_depth) / 2
-        self.top_offset = visual_offset + self.z_length - self.route_depth
+        self.x_offset = visual_offset + (self.dim.x_len - self.dim.material_thickness) / 2
+        self.y_offset = visual_offset + (self.dim.y_len - self.dim.material_thickness) / 2
+        self.z_offset = (self.dim.z_len / 2) - (self.dim.material_thickness - self.dim.route_depth) / 2
+        self.top_offset = visual_offset + self.dim.z_len - self.dim.route_depth
 
     def get_metadata_map(self) -> dict[Part, dict]:
         # pylint: disable=no-value-for-parameter, too-many-function-args

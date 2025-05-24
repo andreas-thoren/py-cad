@@ -59,7 +59,7 @@ PART_MAP = {
 }
 
 DIMENSION_DATA = DimensionData(
-    x_length=400, y_length=300, z_length=250, material_thickness=12
+    x_len=400, y_len=300, z_len=250, material_thickness=12
 )
 ```
 
@@ -90,14 +90,12 @@ class Builder(BuilderABC):
 
     @BuilderABC.register(PartType.BOTTOM)
     def build_bottom(self) -> cq.Workplane:
-        return cq.Workplane("XY").box(self.x_length, self.y_length, self.material_thickness)
+        return cq.Workplane("XY").box(self.x_len, self.y_len, self.material_thickness)
 
     @BuilderABC.register(PartType.SIDE_PANEL)
     def build_side_panel(self) -> cq.Workplane:
-        return cq.Workplane("XZ").box(self.x_length, self.z_length, self.material_thickness)
+        return cq.Workplane("XZ").box(self.x_len, self.z_len, self.material_thickness)
 ```
-
-You can access dimension values (`self.x_length`, `self.z_length`, etc.) directly, thanks to `DimensionDataMixin`.
 
 ---
 
@@ -125,8 +123,8 @@ class Assembler(AssemblerABC):
 
     def __init__(self, dim: DimensionData):
         super().__init__(dim)
-        self.x_offset = self.x_length / 2
-        self.z_offset = self.z_length / 2
+        self.x_offset = self.x_len / 2
+        self.z_offset = self.z_len / 2
 
     def get_metadata_map(self) -> dict:
         return {
@@ -146,7 +144,6 @@ class Assembler(AssemblerABC):
 ```
 
 If your project has a **1:1 mapping** between parts and part types, just omit `part_map` and set parts = PartType.
-Thanks to `DimensionDataMixin`, you can access dimension values (`self.x_length`, `self.z_offset`, etc.), from the DimensionData instance directly in AssemblerABC subclasses.
 
 ---
 

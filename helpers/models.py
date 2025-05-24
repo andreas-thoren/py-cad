@@ -4,47 +4,50 @@ Base classes and utilities for part and assembly modeling using CadQuery.
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 import cadquery as cq
 
 
-@dataclass
 class DimensionData:
     """Can be subclassed for projects that need more dimension variables."""
 
-    x_length: int | float
-    y_length: int | float
-    z_length: int | float
-    material_thickness: int | float | dict[str, int | float]
+    def __init__(
+    self,
+    x_len: int | float,
+    y_len: int | float,
+    z_len: int | float,
+    material_thickness: int | float | dict[str, int | float],
+    **extra_dimensions: Any
+    ):
+        """
+        Initialize DimensionData with dimensions and material thickness.
 
+        Args:
+            x_len: Length in X direction.
+            y_len: Length in Y direction.
+            z_len: Length in Z direction.
+            material_thickness: Thickness of the material or a mapping of part types to thicknesses.
+            extra_dimensions: Additional dimensions as keyword arguments.
+        """
+        self.x_len = x_len
+        self.y_len = y_len
+        self.z_len = z_len
+        self._material_thickness = material_thickness
 
-class DimensionDataMixin:
-    """Allows attribute access from subclasses directly to the DimensionData attributes."""
-
-    @property
-    def x_length(self):
-        return self._dim.x_length
-
-    @property
-    def y_length(self):
-        return self._dim.y_length
-
-    @property
-    def z_length(self):
-        return self._dim.z_length
+        for dimension, value in extra_dimensions.items():
+            setattr(self, dimension, value)
 
     @property
     def material_thickness(self):
-        material_thickness = self._dim.material_thickness
+        material_thickness = self._material_thickness
         if isinstance(material_thickness, dict):
             return material_thickness.copy()
         return material_thickness
 
     def get_part_thickness(self, part_type: str) -> int | float:
         """Get the thickness of a specific part."""
-        material_thickness = self._dim.material_thickness
+        material_thickness = self._material_thickness
         if isinstance(material_thickness, dict):
             try:
                 return material_thickness[part_type]
@@ -54,21 +57,6 @@ class DimensionDataMixin:
                     f"{material_thickness}"
                 ) from exc
         return material_thickness
-
-    def __getattr__(self, name):
-        """Delegate missing attributes to self._dim."""
-
-        try:
-            dim = object.__getattribute__(self, "_dim")
-        except AttributeError:
-            pass
-        else:
-            if hasattr(dim, name):
-                return getattr(dim, name)
-
-        raise AttributeError(
-            f"'{self.__class__.__name__}' object has no attribute '{name}'"
-        ) from None
 
 
 class ResolveMixin:
@@ -145,7 +133,7 @@ class ResolveMixin:
         return parent_items | items if parent_items is not None else items
 
 
-class BuilderABC(DimensionDataMixin, ResolveMixin, ABC):
+class BuilderABC(ResolveMixin, ABC):
     """
     Abstract base class for all Builder classes.
 
@@ -208,6 +196,11 @@ class BuilderABC(DimensionDataMixin, ResolveMixin, ABC):
         self._dim = dim
         self._solid_cache = {}
 
+    @property
+    def dim(self) -> DimensionData:
+        """Get the DimensionData instance used by this builder."""
+        return self._dim
+
     def build_part(
         self, part_type: str, cached_solid: bool = False
     ) -> cq.Workplane | cq.Solid:
@@ -262,7 +255,7 @@ class BuilderABC(DimensionDataMixin, ResolveMixin, ABC):
         return decorator
 
 
-class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
+class AssemblerABC(ResolveMixin, ABC):
     """
     Abstract base class for all Assemblers.
 
@@ -366,6 +359,11 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
         self._dim = dim
         self.builder = self._BuilderClass(dim)
 
+    @property
+    def dim(self) -> DimensionData:
+        """Get the DimensionData instance used by this assembler."""
+        return self._dim
+
     @abstractmethod
     def get_metadata_map(self) -> dict[str, dict]:
         """Return metadata for each part in parts"""
@@ -379,7 +377,7 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
             if parent_func is None or hasattr(parent_func, "__isabstractmethod__"):
                 continue
 
-            parent_map = parent_func(self)
+            parent_map = parent_func(self)  # pylint: disable=not-callable
             # Younger parents come first in mro and should override older parents
             resolved_map = self.normalize_keys(parent_map) | resolved_map
 
