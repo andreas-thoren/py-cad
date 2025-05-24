@@ -9,8 +9,8 @@ class Builder(BuilderABC):
     top_divider_y = 300
     top_divider_z = 300
 
-    def __init__(self, dimension_data: DimensionData):
-        super().__init__(dimension_data)
+    def __init__(self, dim: DimensionData):
+        super().__init__(dim)
         # Calculated dimensions
         offset_x = self.material_thickness[PartType.SHORT_SIDE_PANEL] - self.route_depth
         offset_y = self.material_thickness[PartType.LONG_SIDE_PANEL] - self.route_depth

@@ -9,8 +9,8 @@ class PartialBuilderBase(BuilderABC):
     top_divider_y = 300
     top_divider_z = 300
 
-    def __init__(self, dimension_data: DimensionData):
-        super().__init__(dimension_data)
+    def __init__(self, dim: DimensionData):
+        super().__init__(dim)
         # Calculated dimensions
         self.top_divider_x = self.x_length - self.material_thickness
         self.route_depth = self.material_thickness / 2

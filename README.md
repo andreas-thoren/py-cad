@@ -84,8 +84,8 @@ from .project_data import PartType
 class Builder(BuilderABC):
     part_types = PartType
 
-    def __init__(self, dimension_data: DimensionData):
-        super().__init__(dimension_data)
+    def __init__(self, dim: DimensionData):
+        super().__init__(dim)
         self.offset = self.material_thickness / 2
 
     @BuilderABC.register(PartType.BOTTOM)
@@ -123,8 +123,8 @@ class Assembler(AssemblerABC):
     parts = Part
     part_map = PART_MAP  # Omit if parts == part_types
 
-    def __init__(self, dimension_data: DimensionData):
-        super().__init__(dimension_data)
+    def __init__(self, dim: DimensionData):
+        super().__init__(dim)
         self.x_offset = self.x_length / 2
         self.z_offset = self.z_length / 2
 

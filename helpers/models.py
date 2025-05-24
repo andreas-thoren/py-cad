@@ -25,26 +25,26 @@ class DimensionDataMixin:
 
     @property
     def x_length(self):
-        return self._dimension_data.x_length
+        return self._dim.x_length
 
     @property
     def y_length(self):
-        return self._dimension_data.y_length
+        return self._dim.y_length
 
     @property
     def z_length(self):
-        return self._dimension_data.z_length
+        return self._dim.z_length
 
     @property
     def material_thickness(self):
-        material_thickness = self._dimension_data.material_thickness
+        material_thickness = self._dim.material_thickness
         if isinstance(material_thickness, dict):
             return material_thickness.copy()
         return material_thickness
 
     def get_part_thickness(self, part_type: str) -> int | float:
         """Get the thickness of a specific part."""
-        material_thickness = self._dimension_data.material_thickness
+        material_thickness = self._dim.material_thickness
         if isinstance(material_thickness, dict):
             try:
                 return material_thickness[part_type]
@@ -56,15 +56,15 @@ class DimensionDataMixin:
         return material_thickness
 
     def __getattr__(self, name):
-        """Delegate missing attributes to self._dimension_data."""
+        """Delegate missing attributes to self._dim."""
 
         try:
-            dimension_data = object.__getattribute__(self, "_dimension_data")
+            dim = object.__getattribute__(self, "_dim")
         except AttributeError:
             pass
         else:
-            if hasattr(dimension_data, name):
-                return getattr(dimension_data, name)
+            if hasattr(dim, name):
+                return getattr(dim, name)
 
         raise AttributeError(
             f"'{self.__class__.__name__}' object has no attribute '{name}'"
@@ -155,8 +155,8 @@ class BuilderABC(DimensionDataMixin, ResolveMixin, ABC):
         3. Register each build method using @BuilderABC.register(part_type).
 
     Custom __init__ methods (optional, for calculated dimensions etc) must:
-        1. Accept dimension_data (DimensionData) as its first argument.
-        2. Start by calling super().__init__(dimension_data) before custom logic.
+        1. Accept dim (DimensionData) as its first argument.
+        2. Start by calling super().__init__(dim) before custom logic.
     """
 
     part_types: Iterable[str] | type[StrEnum]
@@ -204,8 +204,8 @@ class BuilderABC(DimensionDataMixin, ResolveMixin, ABC):
         # TODO Add descriptor so that attempted access to this attributes makes it clear
         # that they are only intended for class setup. Point to resolved_part_types!
 
-    def __init__(self, dimension_data: DimensionData):
-        self._dimension_data = dimension_data
+    def __init__(self, dim: DimensionData):
+        self._dim = dim
         self._solid_cache = {}
 
     def build_part(
@@ -244,10 +244,10 @@ class BuilderABC(DimensionDataMixin, ResolveMixin, ABC):
 
     @classmethod
     def get_part(
-        cls, dimension_data: DimensionData, part_type: str, *args, **kwargs
+        cls, dim: DimensionData, part_type: str, *args, **kwargs
     ) -> cq.Workplane:
         """Convenience method to build a part without manually instantiating the builder."""
-        builder = cls(dimension_data, *args, **kwargs)
+        builder = cls(dim, *args, **kwargs)
         return builder.build_part(part_type)
 
     @staticmethod
@@ -355,16 +355,16 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
                 f"{cls.__name__}: part_map contains invalid part type values: {invalid_values}"
             )
 
-    def __init__(self, dimension_data: DimensionData):
+    def __init__(self, dim: DimensionData):
         """
         Initialize assembler and builder.
 
         Args:
-            dimension_data (DimensionData): DimensionData instance containing
+            dim (DimensionData): DimensionData instance containing
                 the dimensions of the assembly.
         """
-        self._dimension_data = dimension_data
-        self.builder = self._BuilderClass(dimension_data)
+        self._dim = dim
+        self.builder = self._BuilderClass(dim)
 
     @abstractmethod
     def get_metadata_map(self) -> dict[str, dict]:
@@ -426,11 +426,11 @@ class AssemblerABC(DimensionDataMixin, ResolveMixin, ABC):
     @classmethod
     def get_assembly(
         cls,
-        dimension_data: DimensionData,
+        dim: DimensionData,
         *args,
         assembly_parts: Iterable[str] | None = None,
         **kwargs,
     ) -> cq.Assembly:
         """Convenience method to create an assembly directly."""
-        assembler = cls(dimension_data, *args, **kwargs)
+        assembler = cls(dim, *args, **kwargs)
         return assembler.assemble(assembly_parts)

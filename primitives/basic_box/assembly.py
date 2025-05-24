@@ -12,10 +12,10 @@ class Assembler(AssemblerABC):
     # pylint: disable=too-many-arguments, too-many-positional-arguments
     def __init__(
         self,
-        dimension_data: DimensionData,
+        dim: DimensionData,
         visual_offset: int = 0,
     ):
-        super().__init__(dimension_data)
+        super().__init__(dim)
         x_thickness = self.material_thickness[PartType.SHORT_SIDE_PANEL]
         y_thickness = self.material_thickness[PartType.LONG_SIDE_PANEL]
         bottom_thickness = self.material_thickness[PartType.BOTTOM]

@@ -6,7 +6,7 @@ def show_garbage_sort_box():
     assembly_parts = [Part.BOTTOM, Part.LONG_SIDE, Part.SHORT_SIDE]
     # assembly = assembler.assemble(assembly_parts)
     assembly = assembler.assemble()
-    # show_object(assembly, name="Garbage Sort Box Assembly")  # type: ignore
+    show_object(assembly, name="Garbage Sort Box Assembly")  # type: ignore
 
 
 def show_plywood_box():
@@ -20,7 +20,7 @@ def show_plywood_box():
     assembly = Assembler.get_assembly(
         BOX_DIMENSIONS, visual_offset=visual_offset, assembly_parts=part_types
     )
-    # show_object(assembly, name="Generic box")  # type: ignore
+    show_object(assembly, name="Generic box")  # type: ignore
 
 
 def show_plywood_box_part():
@@ -30,7 +30,7 @@ def show_plywood_box_part():
 
     part_type = PartType.LONG_SIDE_PANEL
     part = Builder.get_part(BOX_DIMENSIONS, part_type)
-    # show_object(part, name=part_type.name.replace("_", " ").capitalize())
+    show_object(part, name=part_type.name.replace("_", " ").capitalize())
 
 
 def show_basic_box():
@@ -66,7 +66,7 @@ def show_test_project():
     assembly_parts = [Part.BOTTOM, Part.LONG_SIDE, Part.SHORT_SIDE]
     # assembly = assembler.assemble(assembly_parts)
     assembly = assembler.assemble()
-    # show_object(assembly, name="Garbage Sort Box Assembly")  # type: ignore
+    show_object(assembly, name="Garbage Sort Box Assembly")  # type: ignore
 
 
 # show_garbage_sort_box()

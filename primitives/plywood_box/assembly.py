@@ -12,10 +12,10 @@ class Assembler(AssemblerABC):
     # pylint: disable=too-many-arguments, too-many-positional-arguments
     def __init__(
         self,
-        dimension_data: DimensionData,
+        dim: DimensionData,
         visual_offset: int = 0,
     ):
-        super().__init__(dimension_data)
+        super().__init__(dim)
         self.x_offset = visual_offset + (self.x_length - self.material_thickness) / 2
         self.y_offset = visual_offset + (self.y_length - self.material_thickness) / 2
         self.z_offset = (self.z_length / 2) - (self.material_thickness - self.route_depth) / 2
