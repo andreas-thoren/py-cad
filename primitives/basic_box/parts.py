@@ -1,6 +1,6 @@
 import cadquery as cq
 from helpers.models import BuilderABC
-from .project_data import PartType, BoxDimensionData
+from .project_data import PartType
 
 
 class Builder(BuilderABC):

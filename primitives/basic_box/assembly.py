@@ -16,47 +16,43 @@ class Assembler(AssemblerABC):
         visual_offset: int = 0,
     ):
         super().__init__(dim)
-        x_thickness = self.dim.material_thickness[PartType.SHORT_SIDE_PANEL]
-        y_thickness = self.dim.material_thickness[PartType.LONG_SIDE_PANEL]
-        bottom_thickness = self.dim.material_thickness[PartType.BOTTOM]
-        top_thickness = self.dim.material_thickness[PartType.TOP]
-        panel_z = self.dim.z_len - (top_thickness - self.dim.route_depth)
+        btm_z = self.dim[PartType.BOTTOM].z_len
 
-        self.x_offset = visual_offset + (self.dim.x_len - x_thickness) / 2
-        self.y_offset = visual_offset + (self.dim.y_len - y_thickness) / 2
-        self.bottom_offset = (panel_z - bottom_thickness) / 2
-        self.top_offset = visual_offset + self.dim.z_len / 2
+        self.assy_dst_x = (self.dim.x_len / 2) + visual_offset - self.dim.routed_x_len
+        self.assy_dst_y = (self.dim.y_len / 2) + visual_offset - self.dim.routed_y_len
+        self.assy_dst_bottom = (self.dim.panel_z_len - btm_z) / 2
+        self.assy_dst_top = visual_offset + self.dim.z_len / 2
 
     def get_metadata_map(self) -> dict[Part, dict]:
         # pylint: disable=no-value-for-parameter, too-many-function-args
         return {
             Part.BOTTOM: {
-                "loc": cq.Location((0, 0, -self.bottom_offset)),
+                "loc": cq.Location((0, 0, -self.assy_dst_bottom)),
                 "name": "Bottom Panel",
                 "color": cq.Color("burlywood"),
             },
             Part.LONG_SIDE: {
-                "loc": cq.Location((0, self.y_offset, 0)),
+                "loc": cq.Location((0, self.assy_dst_y, 0)),
                 "name": "Long side panel",
                 "color": cq.Color("burlywood2"),
             },
             Part.LONG_SIDE_INVERSE: {
-                "loc": cq.Location((0, -self.y_offset, 0), (0, 0, 1), 180),
+                "loc": cq.Location((0, -self.assy_dst_y, 0), (0, 0, 1), 180),
                 "name": "Long side panel inverse",
                 "color": cq.Color("burlywood2"),
             },
             Part.SHORT_SIDE: {
-                "loc": cq.Location((self.x_offset, 0, 0)),
+                "loc": cq.Location((self.assy_dst_x, 0, 0)),
                 "name": "Short side panel",
                 "color": cq.Color("burlywood4"),
             },
             Part.SHORT_SIDE_INVERSE: {
-                "loc": cq.Location((-self.x_offset, 0, 0), (0, 0, 1), 180),
+                "loc": cq.Location((-self.assy_dst_x, 0, 0), (0, 0, 1), 180),
                 "name": "Short side panel inverse",
                 "color": cq.Color("burlywood4"),
             },
             Part.TOP: {
-                "loc": cq.Location((0, 0, self.top_offset), (1, 0, 0), 180),
+                "loc": cq.Location((0, 0, self.assy_dst_top), (1, 0, 0), 180),
                 "name": "Top Panel",
                 "color": cq.Color("burlywood"),
             },
