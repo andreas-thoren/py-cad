@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from enum import StrEnum
 from helpers.models import DimensionData
 
