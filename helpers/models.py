@@ -9,16 +9,42 @@ from typing import Any
 import cadquery as cq
 
 
-class DimensionData:
+class BasicDimensionData:
+    def __init__(
+        self,
+        x_len: int | float,
+        y_len: int | float,
+        z_len: int | float,
+        **extra_dimensions: Any,
+    ):
+        """Basic dimension data class with X, Y, Z dimensions and optional extra dimensions."""
+        self.x_len = x_len
+        self.y_len = y_len
+        self.z_len = z_len
+        for dimension, value in extra_dimensions.items():
+            setattr(self, dimension, value)
+
+        self._frozen = True
+
+    def __setattr__(self, name, value):
+        # Allow setting anything if not frozen or if setting _frozen itself
+        if getattr(self, "_frozen", False) and name != "_frozen":
+            raise AttributeError(
+                f"{self.__class__.__name__} is frozen, cannot modify '{name}'"
+            )
+        super().__setattr__(name, value)
+
+
+class DimensionData(BasicDimensionData):
     """Can be subclassed for projects that need more dimension variables."""
 
     def __init__(
-    self,
-    x_len: int | float,
-    y_len: int | float,
-    z_len: int | float,
-    material_thickness: int | float | dict[str, int | float],
-    **extra_dimensions: Any
+        self,
+        x_len: int | float,
+        y_len: int | float,
+        z_len: int | float,
+        material_thickness: int | float | dict[str, int | float],
+        **extra_dimensions: Any,
     ):
         """
         Initialize DimensionData with dimensions and material thickness.
@@ -30,13 +56,9 @@ class DimensionData:
             material_thickness: Thickness of the material or a mapping of part types to thicknesses.
             extra_dimensions: Additional dimensions as keyword arguments.
         """
-        self.x_len = x_len
-        self.y_len = y_len
-        self.z_len = z_len
         self._material_thickness = material_thickness
-
-        for dimension, value in extra_dimensions.items():
-            setattr(self, dimension, value)
+        # Super needs to come last due to _frozen attribute
+        super().__init__(x_len=x_len, y_len=y_len, z_len=z_len, **extra_dimensions)
 
     @property
     def material_thickness(self):
