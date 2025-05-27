@@ -16,8 +16,8 @@ class Assembler(AssemblerABC):
         visual_offset: int = 0,
     ):
         super().__init__(dim)
-        self.x_offset = visual_offset + (self.dim.x_len - self.dim.material_thickness) / 2
-        self.y_offset = visual_offset + (self.dim.y_len - self.dim.material_thickness) / 2
+        self.x_offset = visual_offset + (self.dim.x_len - self.dim.mat_thickness) / 2
+        self.y_offset = visual_offset + (self.dim.y_len - self.dim.mat_thickness) / 2
         self.z_offset = self.dim.z_len / 2
 
     def get_metadata_map(self) -> dict[Part, dict]:

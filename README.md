@@ -59,7 +59,7 @@ PART_MAP = {
 }
 
 DIMENSION_DATA = DimensionData(
-    x_len=400, y_len=300, z_len=250, material_thickness=12
+    x_len=400, y_len=300, z_len=250, mat_thickness=12
 )
 ```
 
@@ -86,15 +86,15 @@ class Builder(BuilderABC):
 
     def __init__(self, dim: DimensionData):
         super().__init__(dim)
-        self.offset = self.material_thickness / 2
+        self.offset = self.mat_thickness / 2
 
     @BuilderABC.register(PartType.BOTTOM)
     def build_bottom(self) -> cq.Workplane:
-        return cq.Workplane("XY").box(self.x_len, self.y_len, self.material_thickness)
+        return cq.Workplane("XY").box(self.x_len, self.y_len, self.mat_thickness)
 
     @BuilderABC.register(PartType.SIDE_PANEL)
     def build_side_panel(self) -> cq.Workplane:
-        return cq.Workplane("XZ").box(self.x_len, self.z_len, self.material_thickness)
+        return cq.Workplane("XZ").box(self.x_len, self.z_len, self.mat_thickness)
 ```
 
 ---

@@ -121,7 +121,7 @@ class DimensionData(BasicDimensionData, ResolveMixin):
         x_len: int | float,
         y_len: int | float,
         z_len: int | float,
-        material_thickness: int | float | dict[str, int | float],
+        mat_thickness: int | float | dict[str, int | float],
         **extra_dimensions: Any,
     ):
         """
@@ -131,14 +131,14 @@ class DimensionData(BasicDimensionData, ResolveMixin):
             x_len: Length in X direction.
             y_len: Length in Y direction.
             z_len: Length in Z direction.
-            material_thickness: Thickness of the material or a mapping of part types to thicknesses.
+            mat_thickness: Thickness of the material or a mapping of part types to thicknesses.
             extra_dimensions: Additional dimensions as keyword arguments.
         """
         super().__init__(x_len=x_len, y_len=y_len, z_len=z_len, **extra_dimensions)
 
-        if isinstance(material_thickness, dict):
-            material_thickness = self.normalize_keys(material_thickness)
-        self._resolved_material_thickness = material_thickness
+        if isinstance(mat_thickness, dict):
+            mat_thickness = self.normalize_keys(mat_thickness)
+        self._resolved_mat_thickness = mat_thickness
 
         pt_dims = self.get_part_types_dimensions()
         if not all(isinstance(value, BasicDimensionData) for value in pt_dims.values()):
@@ -167,25 +167,25 @@ class DimensionData(BasicDimensionData, ResolveMixin):
         return {}
 
     @property
-    def material_thickness(self):
-        material_thickness = self._resolved_material_thickness
-        if isinstance(material_thickness, dict):
-            return material_thickness.copy()
-        return material_thickness
+    def mat_thickness(self):
+        mat_thickness = self._resolved_mat_thickness
+        if isinstance(mat_thickness, dict):
+            return mat_thickness.copy()
+        return mat_thickness
 
     def get_part_type_thickness(self, part_type: str) -> int | float:
         """Get the thickness of a specific part."""
-        material_thickness = self._resolved_material_thickness
-        if isinstance(material_thickness, dict):
+        mat_thickness = self._resolved_mat_thickness
+        if isinstance(mat_thickness, dict):
             try:
                 resolved_part_type = self.normalize(part_type)
-                return material_thickness[resolved_part_type]
+                return mat_thickness[resolved_part_type]
             except KeyError as exc:
                 raise ValueError(
                     f"Material thickness for {part_type} not found in mapping:\n"
-                    f"{material_thickness}"
+                    f"{mat_thickness}"
                 ) from exc
-        return material_thickness
+        return mat_thickness
 
 
 class BuilderABC(ResolveMixin, ABC):

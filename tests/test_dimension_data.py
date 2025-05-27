@@ -41,15 +41,15 @@ class TestDimensionData(unittest.TestCase):
             }
 
     def test_material_thickness_scalar(self):
-        dim = self.MyDimData(10, 20, 30, material_thickness=12)
-        self.assertEqual(dim.material_thickness, 12)
+        dim = self.MyDimData(10, 20, 30, mat_thickness=12)
+        self.assertEqual(dim.mat_thickness, 12)
         self.assertEqual(dim.get_part_type_thickness("foo"), 12)
         self.assertEqual(dim.get_part_type_thickness("bar"), 12)
 
     def test_material_thickness_dict(self):
         thickness = {"foo": 2, "bar": 5}
-        dim = self.MyDimData(1, 2, 3, material_thickness=thickness)
-        self.assertEqual(dim.material_thickness, {"foo": 2, "bar": 5})
+        dim = self.MyDimData(1, 2, 3, mat_thickness=thickness)
+        self.assertEqual(dim.mat_thickness, {"foo": 2, "bar": 5})
         self.assertEqual(dim.get_part_type_thickness("foo"), 2)
         self.assertEqual(dim.get_part_type_thickness("bar"), 5)
         # Test normalization
@@ -57,7 +57,7 @@ class TestDimensionData(unittest.TestCase):
         self.assertEqual(dim.get_part_type_thickness(" Bar "), 5)
 
     def test_bracket_access(self):
-        dim = self.MyDimData(1, 2, 3, material_thickness=8)
+        dim = self.MyDimData(1, 2, 3, mat_thickness=8)
         self.assertIsInstance(dim["foo"], BasicDimensionData)
         self.assertEqual(dim["foo"].x_len, 1)
         self.assertEqual(dim["bar"].y_len, 5)
@@ -71,14 +71,14 @@ class TestDimensionData(unittest.TestCase):
                 return {"foo": 123}  # Not BasicDimensionData
 
         with self.assertRaises(TypeError):
-            BadDim(1, 2, 3, material_thickness=1)
+            BadDim(1, 2, 3, mat_thickness=1)
 
     def test_subclass_without_get_part_types_dimensions(self):
         class NoOverrideDim(DimensionData):
             pass  # No get_part_types_dimensions
 
         # Should not raise
-        dim = NoOverrideDim(1, 2, 3, material_thickness=1)
+        dim = NoOverrideDim(1, 2, 3, mat_thickness=1)
         # Default is empty dict, so no parts accessible
         self.assertEqual(dim._resolved_part_types_dimensions, {})
         with self.assertRaises(KeyError):
