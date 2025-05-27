@@ -121,7 +121,7 @@ class DimensionData(BasicDimensionData, ResolveMixin):
         x_len: int | float,
         y_len: int | float,
         z_len: int | float,
-        mat_thickness: int | float | dict[str, int | float],
+        part_type_attributes: dict[str, Any] | None = None,
         **extra_dimensions: Any,
     ):
         """
@@ -131,14 +131,25 @@ class DimensionData(BasicDimensionData, ResolveMixin):
             x_len: Length in X direction.
             y_len: Length in Y direction.
             z_len: Length in Z direction.
-            mat_thickness: Thickness of the material or a mapping of part types to thicknesses.
+            part_type_attributes (dict): Optional attributes mapped from part types.
+              Should be a dictionary where keys are then name of the attribute to be created.
+              Values should be a, nested, dictionary with part types as keys
+              and their corresponding values as dict values.
             extra_dimensions: Additional dimensions as keyword arguments.
         """
         super().__init__(x_len=x_len, y_len=y_len, z_len=z_len, **extra_dimensions)
 
-        if isinstance(mat_thickness, dict):
-            mat_thickness = self.normalize_keys(mat_thickness)
-        self._resolved_mat_thickness = mat_thickness
+        pt_attr = part_type_attributes or {}
+        attrs = {}
+        for attr, dict_val in pt_attr.items():
+            if not isinstance(dict_val, dict):
+                raise TypeError(
+                    f"Part type attributes for '{attr}' must be a dictionary mapping part types to values."
+                )
+
+            for part_type, val in self.normalize_keys(dict_val).items():
+                attrs.setdefault(part_type, {})[attr] = val
+        self._resolved_part_type_attributes = attrs
 
         pt_dims = self.get_part_types_dimensions()
         if not all(isinstance(value, BasicDimensionData) for value in pt_dims.values()):
@@ -146,7 +157,6 @@ class DimensionData(BasicDimensionData, ResolveMixin):
                 "get_part_types_dimensions must return a mapping of part types "
                 "to BasicDimensionData instances."
             )
-
         self._resolved_part_types_dimensions = self.normalize_keys(pt_dims)
 
     def __getitem__(self, part_type) -> BasicDimensionData:
@@ -166,26 +176,24 @@ class DimensionData(BasicDimensionData, ResolveMixin):
         """
         return {}
 
-    @property
-    def mat_thickness(self):
-        mat_thickness = self._resolved_mat_thickness
-        if isinstance(mat_thickness, dict):
-            return mat_thickness.copy()
-        return mat_thickness
+    def get_part_type_attribute(self, part_type: str, attr: str) -> Any:
+        """Get specific attribute of a specific part."""
+        resolved_part_type = self.normalize(part_type)
+        part_type_attrs = self._resolved_part_type_attributes.get(resolved_part_type)
+        if part_type_attrs is None:
+            raise ValueError(
+                f"Attributes for part_type '{resolved_part_type}' not found in:\n"
+                f"{self._resolved_part_type_attributes}"
+            )
 
-    def get_part_type_thickness(self, part_type: str) -> int | float:
-        """Get the thickness of a specific part."""
-        mat_thickness = self._resolved_mat_thickness
-        if isinstance(mat_thickness, dict):
-            try:
-                resolved_part_type = self.normalize(part_type)
-                return mat_thickness[resolved_part_type]
-            except KeyError as exc:
-                raise ValueError(
-                    f"Material thickness for {part_type} not found in mapping:\n"
-                    f"{mat_thickness}"
-                ) from exc
-        return mat_thickness
+        try:
+            return part_type_attrs[attr]
+        except KeyError as exc:
+            raise ValueError(
+                f"Attribute {attr} not found for part type!\n"
+                f"Existing attributes for part type {resolved_part_type}\n"
+                f"{part_type_attrs}\n"
+            ) from exc
 
 
 class BuilderABC(ResolveMixin, ABC):
