@@ -98,14 +98,18 @@ class BasicDimensionData:
         for dimension, value in extra_dimensions.items():
             setattr(self, dimension, value)
 
-        self._frozen = True
+        self._freeze_existing_attributes = True
 
     def __setattr__(self, name, value):
-        # Allow setting anything if not frozen or if setting _frozen itself
-        if getattr(self, "_frozen", False) and name != "_frozen":
-            raise AttributeError(
-                f"{self.__class__.__name__} is frozen, cannot modify '{name}'"
-            )
+        # Allow setting anything if not frozen or if setting _freeze_existing_attributes itself
+        if (
+            getattr(self, "_freeze_existing_attributes", False)
+            and name != "_freeze_existing_attributes"
+        ):
+            if name in self.__dict__:
+                raise AttributeError(
+                    f"Cannot modify existing attribute '{name}' in {self.__class__.__name__}"
+                )
         super().__setattr__(name, value)
 
 
@@ -130,6 +134,8 @@ class DimensionData(BasicDimensionData, ResolveMixin):
             material_thickness: Thickness of the material or a mapping of part types to thicknesses.
             extra_dimensions: Additional dimensions as keyword arguments.
         """
+        super().__init__(x_len=x_len, y_len=y_len, z_len=z_len, **extra_dimensions)
+
         if isinstance(material_thickness, dict):
             material_thickness = self.normalize_keys(material_thickness)
         self._resolved_material_thickness = material_thickness
@@ -143,10 +149,7 @@ class DimensionData(BasicDimensionData, ResolveMixin):
 
         self._resolved_part_types_dimensions = self.normalize_keys(pt_dims)
 
-        # Super needs to come last due to _frozen attribute of BasicDimensionData
-        super().__init__(x_len=x_len, y_len=y_len, z_len=z_len, **extra_dimensions)
-
-    def __getitem__(self, part_type):
+    def __getitem__(self, part_type) -> BasicDimensionData:
         try:
             resolved_part_type = self.normalize(part_type)
             return self._resolved_part_types_dimensions[resolved_part_type]

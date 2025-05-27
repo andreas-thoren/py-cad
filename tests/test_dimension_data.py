@@ -11,14 +11,13 @@ class TestBasicDimensionData(unittest.TestCase):
         self.assertEqual(data.z_len, 3)
         self.assertEqual(data.a, 10)  # pylint: disable=no-member
         self.assertEqual(data.b, 20)  # pylint: disable=no-member
-        self.assertTrue(data._frozen)
+        self.assertTrue(data._freeze_existing_attributes)
 
     def test_frozen_after_init(self):
         data = BasicDimensionData(1, 2, 3)
+        self.new_attribute = 42 # Allowed adding new attributes
         with self.assertRaises(AttributeError):
             data.x_len = 5
-        with self.assertRaises(AttributeError):
-            data.foo = 99
 
     def test_setting_frozen_inside_init(self):
         class MyDim(BasicDimensionData):
