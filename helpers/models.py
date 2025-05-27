@@ -9,78 +9,6 @@ from typing import Any
 import cadquery as cq
 
 
-class BasicDimensionData:
-    def __init__(
-        self,
-        x_len: int | float,
-        y_len: int | float,
-        z_len: int | float,
-        **extra_dimensions: Any,
-    ):
-        """Basic dimension data class with X, Y, Z dimensions and optional extra dimensions."""
-        self.x_len = x_len
-        self.y_len = y_len
-        self.z_len = z_len
-        for dimension, value in extra_dimensions.items():
-            setattr(self, dimension, value)
-
-        self._frozen = True
-
-    def __setattr__(self, name, value):
-        # Allow setting anything if not frozen or if setting _frozen itself
-        if getattr(self, "_frozen", False) and name != "_frozen":
-            raise AttributeError(
-                f"{self.__class__.__name__} is frozen, cannot modify '{name}'"
-            )
-        super().__setattr__(name, value)
-
-
-class DimensionData(BasicDimensionData):
-    """Can be subclassed for projects that need more dimension variables."""
-
-    def __init__(
-        self,
-        x_len: int | float,
-        y_len: int | float,
-        z_len: int | float,
-        material_thickness: int | float | dict[str, int | float],
-        **extra_dimensions: Any,
-    ):
-        """
-        Initialize DimensionData with dimensions and material thickness.
-
-        Args:
-            x_len: Length in X direction.
-            y_len: Length in Y direction.
-            z_len: Length in Z direction.
-            material_thickness: Thickness of the material or a mapping of part types to thicknesses.
-            extra_dimensions: Additional dimensions as keyword arguments.
-        """
-        self._material_thickness = material_thickness
-        # Super needs to come last due to _frozen attribute
-        super().__init__(x_len=x_len, y_len=y_len, z_len=z_len, **extra_dimensions)
-
-    @property
-    def material_thickness(self):
-        material_thickness = self._material_thickness
-        if isinstance(material_thickness, dict):
-            return material_thickness.copy()
-        return material_thickness
-
-    def get_part_thickness(self, part_type: str) -> int | float:
-        """Get the thickness of a specific part."""
-        material_thickness = self._material_thickness
-        if isinstance(material_thickness, dict):
-            try:
-                return material_thickness[part_type]
-            except KeyError as exc:
-                raise ValueError(
-                    f"Material thickness for {part_type} not found in mapping:\n"
-                    f"{material_thickness}"
-                ) from exc
-        return material_thickness
-
-
 class ResolveMixin:
     """Provides methods for normalizing strings and dictionary keys/values."""
 
@@ -153,6 +81,108 @@ class ResolveMixin:
         # Return the combined items datatype from parent_items and new items.
         # New items will 'win' if collisions
         return parent_items | items if parent_items is not None else items
+
+
+class BasicDimensionData:
+    def __init__(
+        self,
+        x_len: int | float,
+        y_len: int | float,
+        z_len: int | float,
+        **extra_dimensions: Any,
+    ):
+        """Basic dimension data class with X, Y, Z dimensions and optional extra dimensions."""
+        self.x_len = x_len
+        self.y_len = y_len
+        self.z_len = z_len
+        for dimension, value in extra_dimensions.items():
+            setattr(self, dimension, value)
+
+        self._frozen = True
+
+    def __setattr__(self, name, value):
+        # Allow setting anything if not frozen or if setting _frozen itself
+        if getattr(self, "_frozen", False) and name != "_frozen":
+            raise AttributeError(
+                f"{self.__class__.__name__} is frozen, cannot modify '{name}'"
+            )
+        super().__setattr__(name, value)
+
+
+class DimensionData(BasicDimensionData, ResolveMixin):
+    """Can be subclassed for projects that need more dimension variables."""
+
+    def __init__(
+        self,
+        x_len: int | float,
+        y_len: int | float,
+        z_len: int | float,
+        material_thickness: int | float | dict[str, int | float],
+        **extra_dimensions: Any,
+    ):
+        """
+        Initialize DimensionData with dimensions and material thickness.
+
+        Args:
+            x_len: Length in X direction.
+            y_len: Length in Y direction.
+            z_len: Length in Z direction.
+            material_thickness: Thickness of the material or a mapping of part types to thicknesses.
+            extra_dimensions: Additional dimensions as keyword arguments.
+        """
+        if isinstance(material_thickness, dict):
+            material_thickness = self.normalize_keys(material_thickness)
+        self._resolved_material_thickness = material_thickness
+
+        pt_dims = self.get_part_types_dimensions()
+        if not all(isinstance(value, BasicDimensionData) for value in pt_dims.values()):
+            raise TypeError(
+                "get_part_types_dimensions must return a mapping of part types "
+                "to BasicDimensionData instances."
+            )
+
+        self._resolved_part_types_dimensions = self.normalize_keys(pt_dims)
+
+        # Super needs to come last due to _frozen attribute of BasicDimensionData
+        super().__init__(x_len=x_len, y_len=y_len, z_len=z_len, **extra_dimensions)
+
+    def __getitem__(self, part_type):
+        try:
+            resolved_part_type = self.normalize(part_type)
+            return self._resolved_part_types_dimensions[resolved_part_type]
+        except KeyError as exc:
+            raise KeyError(
+                f"Part type '{part_type}' not found. Implement get_part_types_dimensions "
+                f"on {self.__class__.__name__} to provide dimensions for specific part types."
+            ) from exc
+
+    def get_part_types_dimensions(self) -> dict[StrEnum | str, BasicDimensionData]:
+        """
+        Meant to be overriden by subclasses that needs dimensions for specific part types.
+        If overriden must return a mapping of part types to BasicDimensionData instances.
+        """
+        return {}
+
+    @property
+    def material_thickness(self):
+        material_thickness = self._resolved_material_thickness
+        if isinstance(material_thickness, dict):
+            return material_thickness.copy()
+        return material_thickness
+
+    def get_part_thickness(self, part_type: str) -> int | float:
+        """Get the thickness of a specific part."""
+        material_thickness = self._resolved_material_thickness
+        if isinstance(material_thickness, dict):
+            try:
+                resolved_part_type = self.normalize(part_type)
+                return material_thickness[resolved_part_type]
+            except KeyError as exc:
+                raise ValueError(
+                    f"Material thickness for {part_type} not found in mapping:\n"
+                    f"{material_thickness}"
+                ) from exc
+        return material_thickness
 
 
 class BuilderABC(ResolveMixin, ABC):
