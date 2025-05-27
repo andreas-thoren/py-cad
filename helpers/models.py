@@ -7,6 +7,32 @@ from collections.abc import Callable, Iterable
 from enum import StrEnum
 from typing import Any
 import cadquery as cq
+from collections import UserDict
+
+
+class NormalizedDict(UserDict):
+    def normalize_key(self, key, raise_error: bool = False) -> Any:
+        """Normalize keys to lowercase strings."""
+        try:
+            return key.strip().lower()
+        except AttributeError as exc:
+            if raise_error:
+                raise TypeError(
+                    f"Keys must be strings, got {type(key).__name__}: {key!r}"
+                ) from exc
+            return key
+
+    def __getitem__(self, key):
+        return super().__getitem__(self.normalize_key(key))
+
+    def __setitem__(self, key, value):
+        super().__setitem__(self.normalize_key(key, raise_error=True), value)
+
+    def __delitem__(self, key):
+        super().__delitem__(self.normalize_key(key))
+
+    def __contains__(self, key):
+        return super().__contains__(self.normalize_key(key))
 
 
 class ResolveMixin:
