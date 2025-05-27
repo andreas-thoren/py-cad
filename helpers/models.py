@@ -151,6 +151,7 @@ class DimensionData(BasicDimensionData, ResolveMixin):
                 attrs.setdefault(part_type, {})[attr] = val
         self._resolved_part_type_attributes = attrs
 
+        # Note that calling get_part_types_dimensions should come last in __init__
         pt_dims = self.get_part_types_dimensions()
         if not all(isinstance(value, BasicDimensionData) for value in pt_dims.values()):
             raise TypeError(
