@@ -170,7 +170,7 @@ class DimensionData(BasicDimensionData, ResolveMixin):
             return material_thickness.copy()
         return material_thickness
 
-    def get_part_thickness(self, part_type: str) -> int | float:
+    def get_part_type_thickness(self, part_type: str) -> int | float:
         """Get the thickness of a specific part."""
         material_thickness = self._resolved_material_thickness
         if isinstance(material_thickness, dict):
