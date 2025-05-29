@@ -221,9 +221,12 @@ Feedback, issues, and pull requests are welcome!
 
 ## TODO
 
+* get_part_types_dimensions should return tuples or tuples + dicts 
+* get_part_types_dimensions should use NormalizationDict
+* Fix init methods of BuilderABC and AssemblerABC to use NormalizationDict
+* Fix init methods of BuilderABC and AssemblerABC to be less strict. Not all part/part_types need to be implemented
 * Add stricter normalization collision checks in `ResolveMixin`
 * Add class-level descriptors to signal configuration-only attributes after subclass creation
-* Normalize all external API methods to accept both `str` and `StrEnum` for maximum flexibility
 
 ---
 

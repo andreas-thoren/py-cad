@@ -166,19 +166,20 @@ class DimensionData(BasicDimensionData, ResolveMixin):
         super().__init__(x_len=x_len, y_len=y_len, z_len=z_len, **extra_dimensions)
 
         pt_attr = part_type_attributes or {}
-        attrs = {}
+        attrs = NormalizedDict()
         for attr, dict_val in pt_attr.items():
             if not isinstance(dict_val, dict):
                 raise TypeError(
                     f"Part type attributes for '{attr}' must be a dictionary mapping part types to values."
                 )
 
-            for part_type, val in self.normalize_keys(dict_val).items():
+            for part_type, val in dict_val.items():
                 attrs.setdefault(part_type, {})[attr] = val
         self._resolved_part_type_attributes = attrs
 
         # Note that calling get_part_types_dimensions should come last in __init__
         pt_dims = self.get_part_types_dimensions()
+        # TODO add pt_dims to
         if not all(isinstance(value, BasicDimensionData) for value in pt_dims.values()):
             raise TypeError(
                 "get_part_types_dimensions must return a mapping of part types "
