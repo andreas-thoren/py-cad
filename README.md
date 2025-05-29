@@ -222,6 +222,7 @@ Feedback, issues, and pull requests are welcome!
 ## TODO
 
 * Fix init methods of BuilderABC and AssemblerABC to use NormalizationDict
+* Ta bort redundant normalisering from models.py när jag nu använder NormalizedDict
 * Fix init methods of BuilderABC and AssemblerABC to be less strict. Not all part/part_types need to be implemented
 * Add stricter normalization collision checks in `ResolveMixin`
 * Add class-level descriptors to signal configuration-only attributes after subclass creation

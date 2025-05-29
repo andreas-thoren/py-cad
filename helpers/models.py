@@ -255,20 +255,21 @@ class DimensionData(BasicDimensionData, ResolveMixin):
 
     def get_part_type_attribute(self, part_type: str, attr: str) -> Any:
         """Get specific attribute of a specific part."""
-        resolved_part_type = self.normalize(part_type)
-        part_type_attrs = self._resolved_part_type_attributes.get(resolved_part_type)
-        if part_type_attrs is None:
+
+        try:
+            part_type_attrs = self._resolved_part_type_attributes[part_type]
+        except KeyError as exc:
             raise KeyError(
-                f"Attributes for part_type '{resolved_part_type}' not found in:\n"
+                f"Attributes for part_type '{part_type}' not found in:\n"
                 f"{self._resolved_part_type_attributes}"
-            )
+            ) from exc
 
         try:
             return part_type_attrs[attr]
         except KeyError as exc:
             raise KeyError(
                 f"Attribute {attr} not found for part type!\n"
-                f"Existing attributes for part type {resolved_part_type}\n"
+                f"Existing attributes for part type {part_type}\n"
                 f"{part_type_attrs}\n"
             ) from exc
 
