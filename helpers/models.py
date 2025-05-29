@@ -250,7 +250,7 @@ class DimensionData(BasicDimensionData, ResolveMixin):
             basic_dims, extra_dims = self._normalize_part_type_dimensions(dimensions)
             basic_dim_data.set_basic_dimensions(basic_dims, **extra_dims)
             basic_dim_data.freeze_existing_attributes()
-        self.freeze_existing_attributes()
+        self.freeze_existing_attributes() # basic dimensions are set at super().__init__.
 
     @property
     def part_types_dimensions(self) -> NormalizedDict[str, BasicDimensionData]:
