@@ -416,7 +416,7 @@ class BuilderABC(ResolveMixin, ABC):
 
         def decorator(func):
             # Defer attaching into _builder_map until __init_subclass__
-            func._registered_part_type = part_type
+            func._registered_part_type = part_type  # pylint: disable=protected-access
             return func
 
         return decorator
@@ -508,7 +508,7 @@ class AssemblerABC(ResolveMixin, ABC):
 
         # Validate values of cls.part_map
         actual_values = frozenset(cls._resolved_part_map.values())
-        allowed_values = cls._BuilderClass._resolved_part_types
+        allowed_values = cls._BuilderClass._resolved_part_types  # pylint: disable=w0212
         invalid_values = actual_values - allowed_values
         if invalid_values:
             raise ValueError(
