@@ -61,12 +61,12 @@ class BoxDimensionData(DimensionData):
         )
 
         return {
-            PartType.BOTTOM: BasicDimensionData(btm_x, panel_y, btm_z),
-            PartType.LONG_SIDE_PANEL: BasicDimensionData(
+            PartType.BOTTOM: (btm_x, panel_y, btm_z),
+            PartType.LONG_SIDE_PANEL: (
                 self.x_len, long_panel_thickness, self.panel_z_len
             ),
-            PartType.SHORT_SIDE_PANEL: BasicDimensionData(
+            PartType.SHORT_SIDE_PANEL: (
                 short_panel_thickness, panel_y, self.panel_z_len
             ),
-            PartType.TOP: BasicDimensionData(self.x_len, self.y_len, top_z),
+            PartType.TOP: (self.x_len, self.y_len, top_z),
         }

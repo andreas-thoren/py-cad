@@ -178,14 +178,13 @@ class DimensionData(BasicDimensionData, ResolveMixin):
         self._resolved_part_type_attributes = attrs
 
         # Note that calling get_part_types_dimensions should come last in __init__
+        # This so that its possible to use instance attributes in the method.
         pt_dims = self.get_part_types_dimensions()
-        # TODO add pt_dims to
-        if not all(isinstance(value, BasicDimensionData) for value in pt_dims.values()):
-            raise TypeError(
-                "get_part_types_dimensions must return a mapping of part types "
-                "to BasicDimensionData instances."
-            )
-        self._resolved_part_types_dimensions = self.normalize_keys(pt_dims)
+        resolved_dimensions = NormalizedDict()
+        for part_type, dimensions in pt_dims.items():
+            dimension_data = self.get_part_type_dimension_data(dimensions)
+            resolved_dimensions[part_type] = dimension_data
+        self._resolved_part_types_dimensions = resolved_dimensions
 
     def __getitem__(self, part_type) -> BasicDimensionData:
         try:
@@ -197,10 +196,38 @@ class DimensionData(BasicDimensionData, ResolveMixin):
                 f"on {self.__class__.__name__} to provide dimensions for specific part types."
             ) from exc
 
-    def get_part_types_dimensions(self) -> dict[StrEnum | str, BasicDimensionData]:
+    @staticmethod
+    def get_part_type_dimension_data(
+        dimensions: (
+            tuple[int | float, int | float, int | float]
+            | tuple[tuple[int | float, int | float, int | float], dict[str, Any]]
+        ),
+    ) -> BasicDimensionData:
+        keys = ("x_len", "y_len", "z_len")
+        match dimensions:
+            case (x, y, z):
+                d = dict(zip(keys, (x, y, z)))
+            case ((x, y, z), {**extras}):
+                d = dict(zip(keys, (x, y, z)))
+                d.update(extras)
+            case _:
+                raise TypeError(
+                    "get_part_types_dimensions must return either a tuple of three "
+                    "numbers (x_len, y_len, z_len) or a tuple containing a tuple of three "
+                    "numbers and a dictionary of extra dimensions. "
+                )
+        return BasicDimensionData(**d)
+
+    def get_part_types_dimensions(
+        self,
+    ) -> dict[
+        StrEnum | str,
+        tuple[int | float, int | float, int | float]
+        | tuple[tuple[int | float, int | float, int | float], dict[str, Any]],
+    ]:
         """
         Meant to be overriden by subclasses that needs dimensions for specific part types.
-        If overriden must return a mapping of part types to BasicDimensionData instances.
+        If overriden must return a mapping of part types to dimension tuples or (tuple, dict) pairs.
         """
         return {}
 
@@ -209,7 +236,7 @@ class DimensionData(BasicDimensionData, ResolveMixin):
         resolved_part_type = self.normalize(part_type)
         part_type_attrs = self._resolved_part_type_attributes.get(resolved_part_type)
         if part_type_attrs is None:
-            raise ValueError(
+            raise KeyError(
                 f"Attributes for part_type '{resolved_part_type}' not found in:\n"
                 f"{self._resolved_part_type_attributes}"
             )
@@ -217,7 +244,7 @@ class DimensionData(BasicDimensionData, ResolveMixin):
         try:
             return part_type_attrs[attr]
         except KeyError as exc:
-            raise ValueError(
+            raise KeyError(
                 f"Attribute {attr} not found for part type!\n"
                 f"Existing attributes for part type {resolved_part_type}\n"
                 f"{part_type_attrs}\n"
