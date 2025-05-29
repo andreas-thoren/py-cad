@@ -3,11 +3,11 @@ Base classes and utilities for part and assembly modeling using CadQuery.
 """
 
 from abc import ABC, abstractmethod
+from collections import UserDict
 from collections.abc import Callable, Iterable
 from enum import StrEnum
 from typing import Any
 import cadquery as cq
-from collections import UserDict
 
 
 class NormalizedDict(UserDict):
@@ -115,20 +115,60 @@ class ResolveMixin:
 
 
 class BasicDimensionData:
+    x_len: int | float
+    y_len: int | float
+    z_len: int | float
+    _has_basic_dimensions: bool
+
     def __init__(
+        self,
+        basic_dimensions: tuple[int | float, int | float, int | float] | None = None,
+        freeze_existing_attributes: bool = False,
+        **extra_dimensions: Any,
+    ):
+        """
+        Basic dimension data class with X, Y, Z dimensions and optional extra dimensions.
+        Basic dimensions can be provided after __init__ with add_basic_dimensions.
+        This allows for flexible initialization and subclassing.
+        """
+
+        if basic_dimensions is not None:
+            self.set_basic_dimensions(*basic_dimensions)
+        else:
+            self._has_basic_dimensions = False
+
+        self.update(**extra_dimensions)
+        if freeze_existing_attributes:
+            self.freeze_existing_attributes()
+
+    def update(self, **extra_dimensions: Any):
+        """
+        Update dimensions with new values.
+        Raises AttributeError if _freeze_existing_attributes is True and dimension already exists.
+        """
+        for dimension, value in extra_dimensions.items():
+            setattr(self, dimension, value)
+
+    def set_basic_dimensions(
         self,
         x_len: int | float,
         y_len: int | float,
         z_len: int | float,
         **extra_dimensions: Any,
-    ):
-        """Basic dimension data class with X, Y, Z dimensions and optional extra dimensions."""
+    ) -> None:
+        """Add basic dimensions to the instance. Optionally accepts extra dimensions."""
+        self.update(**extra_dimensions)
         self.x_len = x_len
         self.y_len = y_len
         self.z_len = z_len
-        for dimension, value in extra_dimensions.items():
-            setattr(self, dimension, value)
+        self._has_basic_dimensions = True
 
+    def freeze_existing_attributes(self):
+        """Freeze existing attributes to prevent modification."""
+        if not self._has_basic_dimensions:
+            raise ValueError(
+                "Cannot freeze existing attributes before setting basic dimensions."
+            )
         self._freeze_existing_attributes = True
 
     def __setattr__(self, name, value):
@@ -177,10 +217,10 @@ class DimensionData(BasicDimensionData, ResolveMixin):
               and their corresponding values as dict values.
             extra_dimensions: Additional dimensions as keyword arguments.
         """
-        super().__init__(x_len=x_len, y_len=y_len, z_len=z_len, **extra_dimensions)
+        super().__init__(basic_dimensions=(x_len, y_len, z_len), **extra_dimensions)
 
         pt_attr = part_type_attributes or {}
-        resolved_pt_attrs = NormalizedDict()
+        self._part_types_dimensions = NormalizedDict()
         for attr, dict_val in pt_attr.items():
             if not isinstance(dict_val, dict):
                 raise TypeError(
@@ -188,57 +228,56 @@ class DimensionData(BasicDimensionData, ResolveMixin):
                 )
 
             for part_type, val in dict_val.items():
-                resolved_pt_attrs.setdefault(part_type, {})[attr] = val
-        self._resolved_part_type_attributes = resolved_pt_attrs
+                basic_dim = self._part_types_dimensions.setdefault(
+                    part_type, BasicDimensionData()
+                )
+                setattr(basic_dim, attr, val)
 
         # Note that calling get_part_types_dimensions should come last in __init__
         # This so that its possible to use instance attributes in the method.
-        pt_dims = NormalizedDict(**self.get_part_types_dimensions())
-        resolved_dimensions = NormalizedDict()
-        for part_type, dimensions in pt_dims.items():
-            resolved_pt_attr = self._resolved_part_type_attributes.get(part_type, {})
-            dimension_data = self.get_part_type_dim(dimensions, resolved_pt_attr)
-            resolved_dimensions[part_type] = dimension_data
-        self._resolved_part_types_dimensions = resolved_dimensions
-
-    @property
-    def part_types_dimensions(self) -> dict[str, BasicDimensionData]:
-        """Get the resolved part types dimensions."""
-        return self._resolved_part_types_dimensions.copy()
+        new_dimensions = NormalizedDict(**self.get_part_types_dimensions())
+        for part_type, dimensions in new_dimensions.items():
+            basic_dim: BasicDimensionData = self._part_types_dimensions.setdefault(
+                part_type, BasicDimensionData()
+            )
+            self._update_part_type_dim(basic_dim, dimensions)
+            basic_dim.freeze_existing_attributes()
+        self.freeze_existing_attributes()
 
     def __getitem__(self, part_type) -> BasicDimensionData:
         try:
-            resolved_part_type = self.normalize(part_type)
-            return self._resolved_part_types_dimensions[resolved_part_type]
+            return self._part_types_dimensions[part_type]
         except KeyError as exc:
             raise KeyError(
                 f"Part type '{part_type}' not found. Implement get_part_types_dimensions "
                 f"on {self.__class__.__name__} to provide dimensions for specific part types."
             ) from exc
 
+    @property
+    def part_types_dimensions(self) -> dict[str, BasicDimensionData]:
+        """Get the resolved part types dimensions."""
+        return self._part_types_dimensions.copy()
+
     @staticmethod
-    def get_part_type_dim(
+    def _update_part_type_dim(
+        basic_dim: BasicDimensionData,
         dimensions: (
             tuple[int | float, int | float, int | float]
             | tuple[tuple[int | float, int | float, int | float], dict[str, Any]]
-        ),
-        extras: dict[str, Any],
-    ) -> BasicDimensionData:
-        keys = ("x_len", "y_len", "z_len")
+        )
+    ) -> None:
         match dimensions:
             case (x, y, z):
-                d = dict(zip(keys, (x, y, z)))
+                extras = {}
             case ((x, y, z), {**extras}):
-                d = dict(zip(keys, (x, y, z)))
-                d.update(extras)
+                pass
             case _:
                 raise TypeError(
                     "get_part_types_dimensions must return either a tuple of three "
                     "numbers (x_len, y_len, z_len) or a tuple containing a tuple of three "
                     "numbers and a dictionary of extra dimensions. "
                 )
-        # merges extras (lower priority) and dimensions (higher priority)
-        return BasicDimensionData(**extras, **d)
+        basic_dim.set_basic_dimensions(x, y, z, **extras)
 
     def get_part_types_dimensions(
         self,
@@ -252,26 +291,6 @@ class DimensionData(BasicDimensionData, ResolveMixin):
         If overriden must return a mapping of part types to dimension tuples or (tuple, dict) pairs.
         """
         return {}
-
-    def get_part_type_attribute(self, part_type: str, attr: str) -> Any:
-        """Get specific attribute of a specific part."""
-
-        try:
-            part_type_attrs = self._resolved_part_type_attributes[part_type]
-        except KeyError as exc:
-            raise KeyError(
-                f"Attributes for part_type '{part_type}' not found in:\n"
-                f"{self._resolved_part_type_attributes}"
-            ) from exc
-
-        try:
-            return part_type_attrs[attr]
-        except KeyError as exc:
-            raise KeyError(
-                f"Attribute {attr} not found for part type!\n"
-                f"Existing attributes for part type {part_type}\n"
-                f"{part_type_attrs}\n"
-            ) from exc
 
 
 class BuilderABC(ResolveMixin, ABC):

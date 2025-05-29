@@ -48,17 +48,11 @@ class BoxDimensionData(DimensionData):
 
     def get_part_types_dimensions(self) -> dict[PartType, BasicDimensionData]:
         panel_y = self.y_len - 2 * self.routed_y_len
-
         btm_x = self.x_len - 2 * self.routed_x_len
-        btm_z = self.get_part_type_attribute(PartType.BOTTOM, "mat_thickness")
-        btm_z = self.get_part_type_attribute(PartType.BOTTOM, "mat_thickness")
-        top_z = self.get_part_type_attribute(PartType.TOP, "mat_thickness")
-        long_panel_thickness = self.get_part_type_attribute(
-            PartType.LONG_SIDE_PANEL, "mat_thickness"
-        )
-        short_panel_thickness = self.get_part_type_attribute(
-            PartType.SHORT_SIDE_PANEL, "mat_thickness"
-        )
+        btm_z = self[PartType.BOTTOM].mat_thickness
+        top_z = self[PartType.TOP].mat_thickness
+        long_panel_thickness = self[PartType.LONG_SIDE_PANEL].mat_thickness
+        short_panel_thickness = self[PartType.SHORT_SIDE_PANEL].mat_thickness
 
         return {
             PartType.BOTTOM: (btm_x, panel_y, btm_z),
