@@ -11,6 +11,11 @@ from collections import UserDict
 
 
 class NormalizedDict(UserDict):
+    """
+    Used for all dicts where part types are used as keys.
+    Normalizes keys to lowercase stripped strings (both for setting/getting items).
+    """
+
     def normalize_key(self, key, raise_error: bool = False) -> Any:
         """Normalize keys to lowercase strings."""
         try:
@@ -138,6 +143,15 @@ class BasicDimensionData:
                 )
         super().__setattr__(name, value)
 
+    def __repr__(self):
+        attrs = []
+        for attr, value in self.__dict__.items():
+            if attr.startswith("_") or callable(value):
+                continue
+            attrs.append(f"{attr}={value!r}")
+        attrs.sort()  # Sort attributes for consistent output
+        return f"{self.__class__.__name__}({', '.join(attrs)})"
+
 
 class DimensionData(BasicDimensionData, ResolveMixin):
     """Can be subclassed for projects that need more dimension variables."""
@@ -166,7 +180,7 @@ class DimensionData(BasicDimensionData, ResolveMixin):
         super().__init__(x_len=x_len, y_len=y_len, z_len=z_len, **extra_dimensions)
 
         pt_attr = part_type_attributes or {}
-        attrs = NormalizedDict()
+        resolved_pt_attrs = NormalizedDict()
         for attr, dict_val in pt_attr.items():
             if not isinstance(dict_val, dict):
                 raise TypeError(
@@ -174,17 +188,23 @@ class DimensionData(BasicDimensionData, ResolveMixin):
                 )
 
             for part_type, val in dict_val.items():
-                attrs.setdefault(part_type, {})[attr] = val
-        self._resolved_part_type_attributes = attrs
+                resolved_pt_attrs.setdefault(part_type, {})[attr] = val
+        self._resolved_part_type_attributes = resolved_pt_attrs
 
         # Note that calling get_part_types_dimensions should come last in __init__
         # This so that its possible to use instance attributes in the method.
-        pt_dims = self.get_part_types_dimensions()
+        pt_dims = NormalizedDict(**self.get_part_types_dimensions())
         resolved_dimensions = NormalizedDict()
         for part_type, dimensions in pt_dims.items():
-            dimension_data = self.get_part_type_dimension_data(dimensions)
+            resolved_pt_attr = self._resolved_part_type_attributes.get(part_type, {})
+            dimension_data = self.get_part_type_dim(dimensions, resolved_pt_attr)
             resolved_dimensions[part_type] = dimension_data
         self._resolved_part_types_dimensions = resolved_dimensions
+
+    @property
+    def part_types_dimensions(self) -> dict[str, BasicDimensionData]:
+        """Get the resolved part types dimensions."""
+        return self._resolved_part_types_dimensions.copy()
 
     def __getitem__(self, part_type) -> BasicDimensionData:
         try:
@@ -197,11 +217,12 @@ class DimensionData(BasicDimensionData, ResolveMixin):
             ) from exc
 
     @staticmethod
-    def get_part_type_dimension_data(
+    def get_part_type_dim(
         dimensions: (
             tuple[int | float, int | float, int | float]
             | tuple[tuple[int | float, int | float, int | float], dict[str, Any]]
         ),
+        extras: dict[str, Any],
     ) -> BasicDimensionData:
         keys = ("x_len", "y_len", "z_len")
         match dimensions:
@@ -216,7 +237,8 @@ class DimensionData(BasicDimensionData, ResolveMixin):
                     "numbers (x_len, y_len, z_len) or a tuple containing a tuple of three "
                     "numbers and a dictionary of extra dimensions. "
                 )
-        return BasicDimensionData(**d)
+        # merges extras (lower priority) and dimensions (higher priority)
+        return BasicDimensionData(**extras, **d)
 
     def get_part_types_dimensions(
         self,
