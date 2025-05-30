@@ -6,7 +6,6 @@ from .project_data import Part, PART_TYPE_MAP
 
 class Assembler(AssemblerABC):
     BuilderClass = Builder
-    parts = Part
     part_map = PART_TYPE_MAP.copy()
 
     # pylint: disable=too-many-arguments, too-many-positional-arguments

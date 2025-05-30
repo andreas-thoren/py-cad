@@ -19,7 +19,8 @@ class NormalizedDict(UserDict, Generic[K, V]):
     Normalizes keys to lowercase stripped strings (both for setting/getting items).
     """
 
-    def normalize_key(self, key: K, raise_error: bool = False) -> str | Any:
+    @staticmethod
+    def normalize_item(key: K, raise_error: bool = False) -> str | Any:
         """
         Normalize keys to lowercase strings. If raise_error is False will return
         the original key withouth raising if original key is not a string.
@@ -34,16 +35,16 @@ class NormalizedDict(UserDict, Generic[K, V]):
             return key
 
     def __getitem__(self, key: K) -> V:
-        return super().__getitem__(self.normalize_key(key))
+        return super().__getitem__(self.normalize_item(key))
 
     def __setitem__(self, key: K, value: V) -> None:
-        super().__setitem__(self.normalize_key(key, raise_error=True), value)
+        super().__setitem__(self.normalize_item(key, raise_error=True), value)
 
     def __delitem__(self, key: K) -> None:
-        super().__delitem__(self.normalize_key(key))
+        super().__delitem__(self.normalize_item(key))
 
     def __contains__(self, key: K) -> bool:
-        return super().__contains__(self.normalize_key(key))
+        return super().__contains__(self.normalize_item(key))
 
 
 class ResolveMixin:
@@ -51,7 +52,7 @@ class ResolveMixin:
 
     @staticmethod
     def normalize(item: str) -> str:
-        return item.strip().lower()
+        return NormalizedDict.normalize_item(item, raise_error=True)
 
     @classmethod
     def normalize_all(cls, items: Iterable[str] | type[StrEnum]) -> set[str]:
@@ -65,6 +66,10 @@ class ResolveMixin:
     @classmethod
     def normalize_keys(cls, mapping: dict[str, Any]) -> dict[str, Any]:
         return {cls.normalize(k): v for k, v in mapping.items()}
+
+    @classmethod
+    def normalize_values(cls, mapping: dict[str, Any]) -> dict[str, Any]:
+        return {k: cls.normalize(v) for k, v in mapping.items()}
 
     @classmethod
     def normalize_items(
@@ -408,13 +413,8 @@ class AssemblerABC(ResolveMixin, ABC):
     BuilderClass: type[BuilderABC]
 
     # Resolved attributes. Dynamically assigned in __init_subclass__
-    _resolved_parts: frozenset[str]
     _resolved_part_map: dict[str, str]
     _BuilderClass: type[BuilderABC]
-
-    @property
-    def resolved_parts(self) -> frozenset[str]:
-        return self._resolved_parts
 
     @property
     def resolved_part_map(self) -> dict[str, str]:
@@ -432,18 +432,25 @@ class AssemblerABC(ResolveMixin, ABC):
             )
         cls._BuilderClass = cls.BuilderClass
 
-        # Resolve part_map
-        if hasattr(cls, "part_map"):
-            part_map = cls.__dict__.get("part_map", {})
-            if not isinstance(part_map, dict):
-                raise TypeError(f"{cls.__name__} part_map must be a dict.")
+        # Validate and normalize part_map
+        part_map = cls.__dict__.get("part_map", {})
+        if not isinstance(part_map, dict):
+            raise TypeError(f"{cls.__name__} part_map must be a dict.")
+        part_map = NormalizedDict(cls.normalize_values(part_map))
 
+        # Resolve part_map (uses private attr _part_map that is stored), 3 potential cases:
+        # 1. If part_map is defined in any concrete subclass, resolved_part_map
+        #     is union of inherited and current part_map. Current part_map has precedence if collisions.
+        # 2. If part_map is defined in the current class only, use it directly.
+        # 3. If no part_map is defined in any class in MRO, use identity mapping for all parts.
+        if hasattr(cls, "_part_map"):
             parent_part_map = (
                 cls.get_parent_items("_resolved_part_map") or NormalizedDict()
             )
-            cls._resolved_part_map = parent_part_map | NormalizedDict(part_map)
+            cls._resolved_part_map = parent_part_map | part_map
+        elif part_map:
+            cls._resolved_part_map = part_map
         else:
-            # Identity map shortcut for _resolved_part_map
             cls._resolved_part_map = NormalizedDict(
                 {part: part for part in cls._BuilderClass._resolved_part_types}
             )
@@ -451,8 +458,10 @@ class AssemblerABC(ResolveMixin, ABC):
         # Validates that values in resolved_part_map are valid part types
         cls._validate_resolved_part_map()
 
-        # Resolve parts from part_map
-        cls._resolved_parts = frozenset(cls._resolved_part_map.keys())
+        # Save private _part_map attr if part_map was defined.
+        # Must come after _resolved_part_map is set since hasattr checks for it.
+        if part_map:
+            cls._part_map = part_map
 
         # Delete class attributes only used for subclass setup
         for attr in cls._setup_attributes:
@@ -538,7 +547,7 @@ class AssemblerABC(ResolveMixin, ABC):
         assembly_parts: frozenset[str] = (
             frozenset(self.normalize_all(assembly_parts))
             if assembly_parts
-            else self._resolved_parts
+            else self._resolved_part_map.keys()
         )
         assembly = cq.Assembly()
 

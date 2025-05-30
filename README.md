@@ -223,7 +223,7 @@ Feedback, issues, and pull requests are welcome!
 
 * Remove unneccessary items from ResolveMixin!
 * Ta bort redundant normalisering from models.py när jag nu använder NormalizedDict
-* Add tests for BuilderABC and AssemblerABC.
+* Add tests for BuilderABC and AssemblerABC. Especially regarding inheritance scenarios.
 * Update models.py docstrings and README.md after quite significant changes to models.py
 * Add class-level descriptors to signal configuration-only attributes after subclass creation
 

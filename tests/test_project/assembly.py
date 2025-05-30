@@ -6,7 +6,6 @@ from .project_data import Part, PartType
 
 class PartialAssemblerBase(AssemblerABC):
     BuilderClass = PartialBuilderBase
-    parts = [Part.BOTTOM]
     part_map = {
         Part.BOTTOM: PartType.BOTTOM,
     }
@@ -30,7 +29,6 @@ class PartialAssemblerBase(AssemblerABC):
 
 class PartialAssemblerMid(PartialAssemblerBase):
     BuilderClass = PartialBuilderMid
-    parts = [Part.LONG_SIDE, Part.LONG_SIDE_INVERSE]
     part_map = {
         Part.LONG_SIDE: PartType.LONG_SIDE_PANEL,
         Part.LONG_SIDE_INVERSE: PartType.LONG_SIDE_PANEL,
@@ -54,7 +52,6 @@ class PartialAssemblerMid(PartialAssemblerBase):
 
 class PartialAssemblerLeaf(PartialAssemblerMid):
     BuilderClass = PartialBuilderLeaf
-    parts = [Part.SHORT_SIDE, Part.SHORT_SIDE_INVERSE]
     part_map = {
         Part.SHORT_SIDE: PartType.SHORT_SIDE_PANEL,
         Part.SHORT_SIDE_INVERSE: PartType.SHORT_SIDE_PANEL,
