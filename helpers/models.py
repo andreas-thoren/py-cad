@@ -434,14 +434,14 @@ class AssemblerABC(ResolveMixin, ABC):
 
         # Resolve part_map
         if hasattr(cls, "part_map"):
-            if not isinstance(cls.part_map, dict):
+            part_map = cls.__dict__.get("part_map", {})
+            if not isinstance(part_map, dict):
                 raise TypeError(f"{cls.__name__} part_map must be a dict.")
 
             parent_part_map = (
                 cls.get_parent_items("_resolved_part_map") or NormalizedDict()
             )
-            child_part_map = cls.__dict__.get("part_map", NormalizedDict())
-            cls._resolved_part_map = parent_part_map | child_part_map
+            cls._resolved_part_map = parent_part_map | NormalizedDict(part_map)
         else:
             # Identity map shortcut for _resolved_part_map
             cls._resolved_part_map = NormalizedDict(
