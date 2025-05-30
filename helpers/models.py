@@ -47,38 +47,8 @@ class NormalizedDict(UserDict, Generic[K, V]):
         return super().__contains__(self.normalize_item(key))
 
 
-class ResolveMixin:
+class InheritanceMixin:
     """Provides methods for normalizing strings and dictionary keys/values."""
-
-    @staticmethod
-    def normalize(item: str) -> str:
-        return NormalizedDict.normalize_item(item, raise_error=True)
-
-    @classmethod
-    def normalize_all(cls, items: Iterable[str] | type[StrEnum]) -> set[str]:
-        # TODO add logic for raising errors when collisions both before and after normalization
-        return {cls.normalize(i) for i in items}
-
-    @classmethod
-    def normalize_map(cls, mapping: dict[str, str]) -> dict[str, str]:
-        return {cls.normalize(k): cls.normalize(v) for k, v in mapping.items()}
-
-    @classmethod
-    def normalize_keys(cls, mapping: dict[str, Any]) -> dict[str, Any]:
-        return {cls.normalize(k): v for k, v in mapping.items()}
-
-    @classmethod
-    def normalize_values(cls, mapping: dict[str, Any]) -> dict[str, Any]:
-        return {k: cls.normalize(v) for k, v in mapping.items()}
-
-    @classmethod
-    def normalize_items(
-        cls, items: set[str] | dict[str, str]
-    ) -> set[str] | dict[str, str]:
-        normalize_func = (
-            cls.normalize_map if isinstance(items, dict) else cls.normalize_all
-        )
-        return normalize_func(items)
 
     @classmethod
     def get_parent_items(
@@ -183,7 +153,7 @@ class BasicDimensionData:
         return f"{self.__class__.__name__}({', '.join(attrs)})"
 
 
-class DimensionData(BasicDimensionData, ResolveMixin):
+class DimensionData(BasicDimensionData):
     """Can be subclassed for projects that need more dimension variables."""
 
     def __init__(
@@ -284,7 +254,7 @@ class DimensionData(BasicDimensionData, ResolveMixin):
             ) from exc
 
 
-class BuilderABC(ResolveMixin, ABC):
+class BuilderABC(InheritanceMixin, ABC):
     """
     Abstract base class for all Builder classes.
 
@@ -327,7 +297,7 @@ class BuilderABC(ResolveMixin, ABC):
 
     def __init__(self, dim: DimensionData):
         self._dim = dim
-        self._solid_cache = {}
+        self._solid_cache = NormalizedDict()
 
     @property
     def dim(self) -> DimensionData:
@@ -347,20 +317,18 @@ class BuilderABC(ResolveMixin, ABC):
         Returns:
             cadquery.Workplane or cadquery.Solid.
         """
-        key = self.normalize(part_type)
-
         try:
-            build_func = self._builder_map[key]
+            build_func = self._builder_map[part_type]
         except KeyError as exc:
             raise ValueError(
-                f"Invalid part type: {part_type}! (normalized to '{key}'). "
+                f"Invalid part type: {part_type}!\n"
                 f"Available: {list(self._builder_map.keys())}"
             ) from exc
 
         if cached_solid:
-            if key not in self._solid_cache:
-                self._solid_cache[key] = build_func(self).val()
-            return self._solid_cache[key]
+            if part_type not in self._solid_cache:
+                self._solid_cache[part_type] = build_func(self).val()
+            return self._solid_cache[part_type]
 
         return build_func(self)
 
@@ -388,7 +356,7 @@ class BuilderABC(ResolveMixin, ABC):
         return decorator
 
 
-class AssemblerABC(ResolveMixin, ABC):
+class AssemblerABC(InheritanceMixin, ABC):
     """
     Abstract base class for all Assemblers.
 
@@ -421,6 +389,10 @@ class AssemblerABC(ResolveMixin, ABC):
     def resolved_part_map(self) -> dict[str, str]:
         return self._resolved_part_map.copy()
 
+    @staticmethod
+    def normalize_values(mapping: dict[str, Any]) -> dict[str, Any]:
+        return {k: NormalizedDict.normalize_item(v) for k, v in mapping.items()}
+
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
 
@@ -437,6 +409,7 @@ class AssemblerABC(ResolveMixin, ABC):
         part_map = cls.__dict__.get("part_map", {})
         if not isinstance(part_map, dict):
             raise TypeError(f"{cls.__name__} part_map must be a dict.")
+        # NormalizedDict takes care of key normalization.
         part_map = NormalizedDict(cls.normalize_values(part_map))
 
         cls._resolved_part_map = cls._resolve_part_map(part_map)
@@ -509,8 +482,8 @@ class AssemblerABC(ResolveMixin, ABC):
     def get_metadata_map(self) -> dict[str, dict]:
         """Return metadata for each part in parts"""
 
-    def get_resolved_metadata_map(self) -> dict[str, dict[str, Any]]:
-        resolved_map = self.normalize_keys(self.get_metadata_map())
+    def _get_resolved_metadata_map(self) -> NormalizedDict[str, dict[str, Any]]:
+        resolved_map = NormalizedDict(self.get_metadata_map())
 
         # Loop through ancester updating resolved_map
         for base in self.__class__.__mro__[1:]:
@@ -518,20 +491,22 @@ class AssemblerABC(ResolveMixin, ABC):
             if parent_func is None or hasattr(parent_func, "__isabstractmethod__"):
                 continue
 
-            parent_map = parent_func(self)  # pylint: disable=not-callable
+            parent_map = NormalizedDict(
+                parent_func(self)  # pylint: disable=not-callable
+            )
             # Younger parents come first in mro and should override older parents
-            resolved_map = self.normalize_keys(parent_map) | resolved_map
+            resolved_map = parent_map | resolved_map
 
         return resolved_map
 
     def _get_assembly_data(
-        self, normalized_assembly_parts: Iterable[str]
+        self, parts: Iterable[str]
     ) -> list[tuple[cq.Workplane, dict]]:
         """Helper used by 'assemble' to build parts and attach metadata."""
         data = []
-        resolved_metadata_map = self.get_resolved_metadata_map()
+        resolved_metadata_map = self._get_resolved_metadata_map()
 
-        for part in normalized_assembly_parts:
+        for part in parts:
             if part not in resolved_metadata_map:
                 raise ValueError(f"Missing metadata for part: {part}")
 
@@ -541,21 +516,17 @@ class AssemblerABC(ResolveMixin, ABC):
             data.append((solid, metadata))
         return data
 
-    def assemble(self, assembly_parts: Iterable[str] | None = None) -> cq.Assembly:
+    def assemble(self, parts: Iterable[str] | None = None) -> cq.Assembly:
         """
         Build an assembly from specified parts.
 
         Args:
-            assembly_parts: Iterable of parts used in assembly. Defaults to all parts.
+            parts: Iterable of parts used in assembly. Defaults to all parts.
 
         Returns:
             cadquery.Assembly
         """
-        assembly_parts: frozenset[str] = (
-            frozenset(self.normalize_all(assembly_parts))
-            if assembly_parts
-            else self._resolved_part_map.keys()
-        )
+        assembly_parts = set(parts) if parts else self._resolved_part_map.keys()
         assembly = cq.Assembly()
 
         for solid, metadata in self._get_assembly_data(assembly_parts):
