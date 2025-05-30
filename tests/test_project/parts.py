@@ -4,8 +4,6 @@ from .project_data import PartType
 
 
 class PartialBuilderBase(BuilderABC):
-    part_types = [PartType.BOTTOM]
-
     top_divider_y = 300
     top_divider_z = 300
 
@@ -36,8 +34,6 @@ class PartialBuilderBase(BuilderABC):
 
 
 class PartialBuilderMid(PartialBuilderBase):
-    part_types = [PartType.LONG_SIDE_PANEL]
-
     @BuilderABC.register(PartType.LONG_SIDE_PANEL)
     def get_long_side_panel(self, invert_grooves=False) -> cq.Workplane:
         groove_offset = self.dim.x_len / 2 - self.dim.mat_thickness / 2
@@ -61,8 +57,6 @@ class PartialBuilderMid(PartialBuilderBase):
 
 
 class PartialBuilderLeaf(PartialBuilderMid):
-    part_types = [PartType.SHORT_SIDE_PANEL]
-
     @BuilderABC.register(PartType.SHORT_SIDE_PANEL)
     def get_short_side_panel(self) -> cq.Workplane:
         return cq.Workplane("YZ").box(

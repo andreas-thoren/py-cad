@@ -314,50 +314,32 @@ class BuilderABC(ResolveMixin, ABC):
         2. Start by calling super().__init__(dim) before custom logic.
     """
 
-    part_types: Iterable[str] | type[StrEnum]
-
     # Resolved attributes. Dynamically assigned in __init_subclass__
     _resolved_part_types: frozenset[str]
-    _builder_map: dict[str, Callable]
+    _builder_map: NormalizedDict[str, Callable]
 
     @property
-    def resolved_part_types(self) -> frozenset[str]:
+    def part_types(self) -> frozenset[str]:
         return self._resolved_part_types
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
 
-        # Resolve (normalize and add parent part_types) through resolve_items
-        cls._resolved_part_types = frozenset(
-            cls.resolve_items("part_types", "_resolved_part_types")
-        )
-
         # Make a copy of concrete parents _builder_map (if concrete parent exists)
-        parent_builder_map = cls.get_parent_items("_builder_map") or {}
+        parent_builder_map = cls.get_parent_items("_builder_map") or NormalizedDict()
 
         # Build the child_builder_map by scanning the class for methods with registered parts
-        child_builder_map = {}
+        child_builder_map = NormalizedDict()
         for attr in cls.__dict__.values():
             if callable(attr) and hasattr(attr, "_registered_part_type"):
-                part_type = cls.normalize(attr._registered_part_type)
+                part_type = attr._registered_part_type
                 child_builder_map[part_type] = attr
 
         # Current class_builder_map is the combined map, child definitions win if collisions.
         cls._builder_map = parent_builder_map | child_builder_map
 
-        # Safety check: ensure all part types are mapped
-        missing_parts = list(cls._resolved_part_types - set(cls._builder_map.keys()))
-        if missing_parts:
-            raise ValueError(
-                f"{cls.__name__}._builder_map missing parts: {missing_parts}"
-            )
-
-        # Delete "part_types" which is only used for subclass setup
-        if "part_types" in cls.__dict__:
-            delattr(cls, "part_types")
-
-        # TODO Add descriptor so that attempted access to this attributes makes it clear
-        # that they are only intended for class setup. Point to resolved_part_types!
+        # Resolve part_types from the builder map
+        cls._resolved_part_types = frozenset(cls._builder_map.keys())
 
     def __init__(self, dim: DimensionData):
         self._dim = dim

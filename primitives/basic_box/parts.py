@@ -4,8 +4,6 @@ from .project_data import PartType
 
 
 class Builder(BuilderABC):
-    part_types = PartType
-
     top_divider_y = 300
     top_divider_z = 300
 
