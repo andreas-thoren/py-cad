@@ -383,7 +383,6 @@ class AssemblerABC(InheritanceMixin, ABC):
     # Resolved attributes. Dynamically assigned in __init_subclass__
     _resolved_part_map: dict[str, str]
     _BuilderClass: type[BuilderABC]
-    # _explicit_part_map: dict[str, str], will be set if part_map is defined.
 
     @property
     def resolved_part_map(self) -> dict[str, str]:
@@ -414,11 +413,6 @@ class AssemblerABC(InheritanceMixin, ABC):
 
         cls._resolved_part_map = cls._resolve_part_map(part_map)
         cls._validate_resolved_part_map()
-
-        # Save private _explicit_part_map attr if part_map was defined.
-        # Must come after _resolved_part_map is set since hasattr checks for it.
-        if part_map:
-            cls._explicit_part_map = part_map
 
         # Delete class attributes only used for subclass setup
         for attr in cls._setup_attributes:
