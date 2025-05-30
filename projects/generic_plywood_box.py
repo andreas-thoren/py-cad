@@ -8,5 +8,5 @@ PLY_THICKNESS = 9
 ROUTE_DEPTH = PLY_THICKNESS / 2
 
 BOX_DIMENSIONS = BoxDimensionData(
-    BOX_X, BOX_Y, BOX_Z, mat_thickness=PLY_THICKNESS, route_depth=ROUTE_DEPTH
+    (BOX_X, BOX_Y, BOX_Z), mat_thickness=PLY_THICKNESS, route_depth=ROUTE_DEPTH
 )

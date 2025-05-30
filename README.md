@@ -221,7 +221,6 @@ Feedback, issues, and pull requests are welcome!
 
 ## TODO
 
-* DimensionData should use same __init__ call signature as BasicDimensionData, fix!
 * Remove part_types from BuilderABC. _resolved_part_types should be deduced from _builder_map
 * Remove parts from AssemblerABC. _resolved_parts should be deduced from _resolved_part_map if present.
 * AssemblerABC: If part_map is not specified _resolved_parts should equal to BuilderABC _resolved_part_types

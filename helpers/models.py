@@ -4,7 +4,7 @@ Base classes and utilities for part and assembly modeling using CadQuery.
 
 from abc import ABC, abstractmethod
 from collections import UserDict
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from enum import StrEnum
 from typing import Any, Generic, TypeVar
 import cadquery as cq
@@ -158,6 +158,10 @@ class BasicDimensionData:
         **extra_dimensions: Any,
     ) -> None:
         """Add basic dimensions to the instance. Optionally accepts extra dimensions."""
+        if not isinstance(basic_dimensions, Sequence) or len(basic_dimensions) != 3:
+            raise TypeError(
+                "basic_dimensions must be a Sequence (tuple, list, ...) of three numbers (x_len, y_len, z_len)."
+            )
         self.update(**extra_dimensions)
         x_len, y_len, z_len = basic_dimensions
         # Basic dimensions come last to take priority over extra dimensions.
@@ -200,9 +204,7 @@ class DimensionData(BasicDimensionData, ResolveMixin):
 
     def __init__(
         self,
-        x_len: int | float,
-        y_len: int | float,
-        z_len: int | float,
+        basic_dimensions: tuple[int | float, int | float, int | float],
         part_type_attributes: dict[str, Any] | None = None,
         **extra_dimensions: Any,
     ):
@@ -210,9 +212,7 @@ class DimensionData(BasicDimensionData, ResolveMixin):
         Initialize DimensionData with dimensions and material thickness.
 
         Args:
-            x_len: Length in X direction.
-            y_len: Length in Y direction.
-            z_len: Length in Z direction.
+            basic_dimensions (tuple): Tuple of (x_len, y_len, z_len).
             part_type_attributes (dict): Optional attributes mapped from part types.
               Should be a dictionary where keys are then name of the attribute to be created.
               Values should be a, nested, dictionary with part types as keys
@@ -220,7 +220,7 @@ class DimensionData(BasicDimensionData, ResolveMixin):
             extra_dimensions: Additional dimensions as keyword arguments.
         """
         # Call super init first to set project basic dimensions.
-        super().__init__(basic_dimensions=(x_len, y_len, z_len), **extra_dimensions)
+        super().__init__(basic_dimensions=basic_dimensions, **extra_dimensions)
 
         # Initialize _part_types_dimensions as a NormalizedDict
         self._part_types_dimensions = NormalizedDict()
@@ -250,7 +250,7 @@ class DimensionData(BasicDimensionData, ResolveMixin):
             basic_dims, extra_dims = self._normalize_part_type_dimensions(dimensions)
             basic_dim_data.set_basic_dimensions(basic_dims, **extra_dims)
             basic_dim_data.freeze_existing_attributes()
-        self.freeze_existing_attributes() # basic dimensions are set at super().__init__.
+        self.freeze_existing_attributes()  # basic dimensions are set at super().__init__.
 
     @property
     def part_types_dimensions(self) -> NormalizedDict[str, BasicDimensionData]:
