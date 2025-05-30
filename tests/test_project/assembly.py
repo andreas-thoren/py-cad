@@ -27,21 +27,31 @@ class PartialAssemblerBase(AssemblerABC):
         }
 
 
-class PartialAssemblerMid(PartialAssemblerBase):
+class PartialAssemblerMidOne(PartialAssemblerBase):
     BuilderClass = PartialBuilderMid
     part_map = {
         Part.LONG_SIDE: PartType.LONG_SIDE_PANEL,
-        Part.LONG_SIDE_INVERSE: PartType.LONG_SIDE_PANEL,
     }
 
     def get_metadata_map(self) -> dict[Part, dict]:
-        # pylint: disable=no-value-for-parameter, too-many-function-args
         return {
+            # pylint: disable=no-value-for-parameter
             Part.LONG_SIDE: {
                 "loc": cq.Location((0, self.y_offset, self.z_offset)),
                 "name": "Long side panel",
                 "color": cq.Color("burlywood2"),
             },
+        }
+
+class PartialAssemblerMidTwo(PartialAssemblerBase):
+    BuilderClass = PartialBuilderMid
+    part_map = {
+        Part.LONG_SIDE_INVERSE: PartType.LONG_SIDE_PANEL,
+    }
+
+    def get_metadata_map(self) -> dict[Part, dict]:
+        return {
+            # pylint: disable=no-value-for-parameter, too-many-function-args
             Part.LONG_SIDE_INVERSE: {
                 "loc": cq.Location((0, -self.y_offset, self.z_offset), (0, 0, 1), 180),
                 "name": "Long side panel inverse",
@@ -50,7 +60,7 @@ class PartialAssemblerMid(PartialAssemblerBase):
         }
 
 
-class PartialAssemblerLeaf(PartialAssemblerMid):
+class PartialAssemblerLeaf(PartialAssemblerMidOne, PartialAssemblerMidTwo):
     BuilderClass = PartialBuilderLeaf
     part_map = {
         Part.SHORT_SIDE: PartType.SHORT_SIDE_PANEL,

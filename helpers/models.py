@@ -439,24 +439,7 @@ class AssemblerABC(ResolveMixin, ABC):
             raise TypeError(f"{cls.__name__} part_map must be a dict.")
         part_map = NormalizedDict(cls.normalize_values(part_map))
 
-        # Resolve part_map, 3 potential cases:
-        # 1. If part_map is defined in any concrete subclass, resolved_part_map
-        #     is union of inherited and current part_map. Current part_map has precedence if collisions.
-        # 2. If part_map is defined in the current class only, use it directly.
-        # 3. If no part_map is defined in any class in MRO, use identity mapping for all parts.
-        if hasattr(cls, "_explicit_part_map"):
-            parent_part_map = (
-                cls.get_parent_items("_resolved_part_map") or NormalizedDict()
-            )
-            cls._resolved_part_map = parent_part_map | part_map
-        elif part_map:
-            cls._resolved_part_map = part_map
-        else:
-            cls._resolved_part_map = NormalizedDict(
-                {part: part for part in cls._BuilderClass._resolved_part_types}
-            )
-
-        # Validates that values in resolved_part_map are valid part types
+        cls._resolved_part_map = cls._resolve_part_map(part_map)
         cls._validate_resolved_part_map()
 
         # Save private _explicit_part_map attr if part_map was defined.
@@ -471,6 +454,29 @@ class AssemblerABC(ResolveMixin, ABC):
 
         # TODO Add descriptor so that attempted access to this attributes makes it clear
         # that they are only intended for class setup. Point to resolved_part_types!
+
+    @classmethod
+    def _resolve_part_map(
+        cls, part_map: NormalizedDict[str, str]
+    ) -> NormalizedDict[str, str]:
+        """
+        Resolve and returns part_map. 3 potential cases:
+        1. If part_map is defined in any concrete subclass, resolved_part_map
+            is union of inherited and current part_map. Current part_map has precedence if collisions.
+        2. If part_map is defined in the current class only, use it directly.
+        3. If no part_map is defined in any class in MRO, use identity mapping for all parts.
+        """
+        if hasattr(cls, "_explicit_part_map"):
+            parent_part_map = (
+                cls.get_parent_items("_resolved_part_map") or NormalizedDict()
+            )
+            return parent_part_map | part_map
+
+        if part_map:
+            return part_map
+
+        part_types = cls._BuilderClass._resolved_part_types  # pylint: disable=w0212
+        return NormalizedDict({part: part for part in part_types})
 
     @classmethod
     def _validate_resolved_part_map(cls):
