@@ -440,7 +440,7 @@ class AssemblerABC(InheritanceMixin, ABC):
         if part_map:
             return parent_part_map | part_map
 
-        mapped_part_types = {part_type for part_type in parent_part_map.values()}
+        mapped_part_types = set(parent_part_map.values())
         part_types = cls._BuilderClass._resolved_part_types  # pylint: disable=w0212
         new_mappings = NormalizedDict(
             {pt: pt for pt in part_types if pt not in mapped_part_types}
