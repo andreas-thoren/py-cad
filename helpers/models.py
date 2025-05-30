@@ -433,23 +433,25 @@ class AssemblerABC(InheritanceMixin, ABC):
         cls, part_map: NormalizedDict[str, str]
     ) -> NormalizedDict[str, str]:
         """
-        Resolve and returns part_map. 3 potential cases:
-        1. If part_map is defined in any concrete subclass, resolved_part_map
-            is union of inherited and current part_map. Current part_map has precedence if collisions.
-        2. If part_map is defined in the current class only, use it directly.
-        3. If no part_map is defined in any class in MRO, use identity mapping for all parts.
+        Resolve and returns part_map. 2 potential cases:
+        1. part_map is defined in the current class. _resolved_part_map will be a
+           union of inherited _resolved_part_map and current part_map.
+           Current part_map keys have precedence if collisions.
+        2. No part_map is defined in the current class. _resolved_part_map will use
+           inherited _resolved_part_map if it exists. Any part types defined in
+           BuilderClass._resolved_part_types NOT in the _resolved_part_map (values)
+           will be added with identity mapping (part_type: part_type).
         """
-        if hasattr(cls, "_explicit_part_map"):
-            parent_part_map = (
-                cls.get_parent_items("_resolved_part_map") or NormalizedDict()
-            )
+        parent_part_map = cls.get_parent_items("_resolved_part_map") or NormalizedDict()
+        if part_map:
             return parent_part_map | part_map
 
-        if part_map:
-            return part_map
-
+        mapped_part_types = {part_type for part_type in parent_part_map.values()}
         part_types = cls._BuilderClass._resolved_part_types  # pylint: disable=w0212
-        return NormalizedDict({part: part for part in part_types})
+        new_mappings = NormalizedDict(
+            {pt: pt for pt in part_types if pt not in mapped_part_types}
+        )
+        return new_mappings | parent_part_map
 
     @classmethod
     def _validate_resolved_part_map(cls):
