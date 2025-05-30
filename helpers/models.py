@@ -19,8 +19,11 @@ class NormalizedDict(UserDict, Generic[K, V]):
     Normalizes keys to lowercase stripped strings (both for setting/getting items).
     """
 
-    def normalize_key(self, key: K, raise_error: bool = False) -> Any:
-        """Normalize keys to lowercase strings."""
+    def normalize_key(self, key: K, raise_error: bool = False) -> str | Any:
+        """
+        Normalize keys to lowercase strings. If raise_error is False will return
+        the original key withouth raising if original key is not a string.
+        """
         try:
             return key.strip().lower()
         except AttributeError as exc:
@@ -92,30 +95,6 @@ class ResolveMixin:
 
         return parent_items
 
-    @classmethod
-    def resolve_items(
-        cls,
-        attr_name: str,
-        resolved_attr_name: str,
-        normalize: bool = True,
-    ) -> set[str] | dict[str, str]:
-
-        parent_items = cls.get_parent_items(resolved_attr_name)
-        items = cls.__dict__.get(attr_name)
-
-        if items is None:
-            if parent_items is None:
-                raise ValueError(
-                    f"{cls.__name__} must define {attr_name} if not inheriting from a concrete class that does."
-                )
-            return parent_items
-
-        items = cls.normalize_items(items) if normalize else items
-
-        # Return the combined items datatype from parent_items and new items.
-        # New items will 'win' if collisions
-        return parent_items | items if parent_items is not None else items
-
 
 class BasicDimensionData:
     x_len: int | float
@@ -184,8 +163,8 @@ class BasicDimensionData:
         ):
             if name in self.__dict__:
                 raise AttributeError(
-                    f"Existing attributes in {self.__class__.__name__} "
-                    "are immutable after calling freeze_existing_attributes."
+                    f"Attributes of {self.__class__.__name__} instances "
+                    "are immutable after freeze_existing_attributes() has been called."
                 )
         super().__setattr__(name, value)
 
@@ -422,11 +401,9 @@ class AssemblerABC(ResolveMixin, ABC):
 
     # attributes in _setup_attributes are only used during __init_subclass__. Deleted.
     _setup_attributes = (
-        "parts",
         "part_map",
         "BuilderClass",
     )
-    parts: Iterable[str] | type[StrEnum]
     part_map: dict[str, str]
     BuilderClass: type[BuilderABC]
 
@@ -445,8 +422,6 @@ class AssemblerABC(ResolveMixin, ABC):
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        # Resolve (normalize and add parent parts) through resolve_items
-        cls._resolved_parts = frozenset(cls.resolve_items("parts", "_resolved_parts"))
 
         # Check that BuilderClass is correct, move to private attribute.
         if not hasattr(cls, "BuilderClass") or not issubclass(
@@ -457,18 +432,27 @@ class AssemblerABC(ResolveMixin, ABC):
             )
         cls._BuilderClass = cls.BuilderClass
 
-        # Validate correct part_map if not using identity map
+        # Resolve part_map
         if hasattr(cls, "part_map"):
             if not isinstance(cls.part_map, dict):
                 raise TypeError(f"{cls.__name__} part_map must be a dict.")
 
-            cls._resolved_part_map = cls.resolve_items("part_map", "_resolved_part_map")
-            cls._validate_resolved_part_map()
-        elif cls._resolved_parts == cls._BuilderClass._resolved_part_types:
-            # Identity map shortcut for _resolved_part_map
-            cls._resolved_part_map = {part: part for part in cls._resolved_parts}
+            parent_part_map = (
+                cls.get_parent_items("_resolved_part_map") or NormalizedDict()
+            )
+            child_part_map = cls.__dict__.get("part_map", NormalizedDict())
+            cls._resolved_part_map = parent_part_map | child_part_map
         else:
-            raise TypeError(f"{cls.__name__} must define part_map as a dict.")
+            # Identity map shortcut for _resolved_part_map
+            cls._resolved_part_map = NormalizedDict(
+                {part: part for part in cls._BuilderClass._resolved_part_types}
+            )
+
+        # Validates that values in resolved_part_map are valid part types
+        cls._validate_resolved_part_map()
+
+        # Resolve parts from part_map
+        cls._resolved_parts = frozenset(cls._resolved_part_map.keys())
 
         # Delete class attributes only used for subclass setup
         for attr in cls._setup_attributes:
@@ -480,14 +464,6 @@ class AssemblerABC(ResolveMixin, ABC):
 
     @classmethod
     def _validate_resolved_part_map(cls):
-        actual_keys = frozenset(cls._resolved_part_map.keys())
-        expected_keys = cls._resolved_parts
-        if actual_keys != expected_keys:
-            raise ValueError(
-                f"{cls.__name__}: incomplete part_map keys: "
-                f"expected {expected_keys}, got {actual_keys}"
-            )
-
         # Validate values of cls.part_map
         actual_values = frozenset(cls._resolved_part_map.values())
         allowed_values = cls._BuilderClass._resolved_part_types  # pylint: disable=w0212

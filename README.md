@@ -222,6 +222,7 @@ Feedback, issues, and pull requests are welcome!
 ## TODO
 
 * Remove parts from AssemblerABC. _resolved_parts should be deduced from _resolved_part_map if present.
+* Remove unneccessary items from ResolveMixin!
 * AssemblerABC: If part_map is not specified _resolved_parts should equal to BuilderABC _resolved_part_types
 * Fix init methods of BuilderABC and AssemblerABC to use NormalizationDict
 * Ta bort redundant normalisering from models.py när jag nu använder NormalizedDict
