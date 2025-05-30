@@ -409,12 +409,13 @@ class AssemblerABC(ResolveMixin, ABC):
         "part_map",
         "BuilderClass",
     )
-    part_map: dict[str, str]
+    # part_map: dict[str, str], optional, maps part names to part types.
     BuilderClass: type[BuilderABC]
 
     # Resolved attributes. Dynamically assigned in __init_subclass__
     _resolved_part_map: dict[str, str]
     _BuilderClass: type[BuilderABC]
+    # _explicit_part_map: dict[str, str], will be set if part_map is defined.
 
     @property
     def resolved_part_map(self) -> dict[str, str]:
@@ -438,12 +439,12 @@ class AssemblerABC(ResolveMixin, ABC):
             raise TypeError(f"{cls.__name__} part_map must be a dict.")
         part_map = NormalizedDict(cls.normalize_values(part_map))
 
-        # Resolve part_map (uses private attr _part_map that is stored), 3 potential cases:
+        # Resolve part_map, 3 potential cases:
         # 1. If part_map is defined in any concrete subclass, resolved_part_map
         #     is union of inherited and current part_map. Current part_map has precedence if collisions.
         # 2. If part_map is defined in the current class only, use it directly.
         # 3. If no part_map is defined in any class in MRO, use identity mapping for all parts.
-        if hasattr(cls, "_part_map"):
+        if hasattr(cls, "_explicit_part_map"):
             parent_part_map = (
                 cls.get_parent_items("_resolved_part_map") or NormalizedDict()
             )
@@ -458,10 +459,10 @@ class AssemblerABC(ResolveMixin, ABC):
         # Validates that values in resolved_part_map are valid part types
         cls._validate_resolved_part_map()
 
-        # Save private _part_map attr if part_map was defined.
+        # Save private _explicit_part_map attr if part_map was defined.
         # Must come after _resolved_part_map is set since hasattr checks for it.
         if part_map:
-            cls._part_map = part_map
+            cls._explicit_part_map = part_map
 
         # Delete class attributes only used for subclass setup
         for attr in cls._setup_attributes:
