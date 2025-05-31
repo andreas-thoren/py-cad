@@ -1,5 +1,9 @@
 """
-Base classes and utilities for part and assembly modeling using CadQuery.
+Core framework for parametric part and assembly modeling in CadQuery.
+
+Defines abstract base classes and utilities for constructing, managing, and organizing parametric
+parts, part types, and assemblies. Provides robust support for flexible dimension data,
+automatic attribute normalization, inheritance, and dynamic builder/assembler registration.
 """
 
 from abc import ABC, abstractmethod
@@ -12,9 +16,11 @@ import cadquery as cq
 
 class StrAutoEnum(StrEnum):
     """
-    StrEnum that automatically assigns values based on the enum member name.
-    Useful for part types and other string-based enumerations.
+    StrEnum that automatically assigns values based on the enum member name
+    if using auto() (from enum import auto). Values will then be lowercased strings
+    of the member names.
     """
+
     @staticmethod
     def _generate_next_value_(name, start, count, last_values):
         return name.lower()
@@ -59,13 +65,18 @@ class NormalizedDict(UserDict, Generic[K, V]):
 
 
 class InheritanceMixin:
-    """Provides methods for normalizing strings and dictionary keys/values."""
+    """Provides get_parent_items method to collect and merge inherited attributes."""
 
     @classmethod
     def get_parent_items(
         cls,
         attr_name: str,
     ) -> set[str] | dict[str, str] | None:
+        """
+        Return the union of the inherited attribute across the class MRO.
+        If collisions are found, the younger (more derived) class's items take precedence.
+        If the attribute is not found in any ancestor, returns None.
+        """
         # Loop through ancestors creating parent_items
         parent_items = None
         for base in cls.__mro__[1:]:
@@ -83,6 +94,11 @@ class InheritanceMixin:
 
 
 class BasicDimensionData:
+    """
+    Stores basic dimensional data (x_len, y_len, z_len) with support for extra dynamic attributes.
+    Supports dynamic extension and existing attributes can be 'frozen' to prevent modification.
+    """
+
     x_len: int | float
     y_len: int | float
     z_len: int | float
@@ -122,7 +138,7 @@ class BasicDimensionData:
         basic_dimensions: tuple[int | float, int | float, int | float],
         **extra_dimensions: Any,
     ) -> None:
-        """Add basic dimensions to the instance. Optionally accepts extra dimensions."""
+        """Set the main x_len, y_len, and z_len dimensions (and optional additional attributes)."""
         if not isinstance(basic_dimensions, Sequence) or len(basic_dimensions) != 3:
             raise TypeError(
                 "basic_dimensions must be a Sequence (tuple, list, ...) of three numbers (x_len, y_len, z_len)."
@@ -142,7 +158,7 @@ class BasicDimensionData:
         self._freeze_existing_attributes = True
 
     def __setattr__(self, name, value):
-        # Allow setting anything if not frozen or if setting _freeze_existing_attributes itself
+        """Allow setting anything if not frozen or if setting _freeze_existing_attributes itself"""
         if (
             getattr(self, "_freeze_existing_attributes", False)
             and name != "_freeze_existing_attributes"
@@ -165,7 +181,15 @@ class BasicDimensionData:
 
 
 class DimensionData(BasicDimensionData):
-    """Can be subclassed for projects that need more dimension variables."""
+    """
+    Extends BasicDimensionData to support per-part-type dimension and attribute storage.
+    Designed for project- or part-specific logic where each part type may require custom
+    dimensions or attributes. If your project needs part_type-specific dimensions
+    or attributes, subclass this and implement get_part_types_dimensions method.
+    Part types dimensions can then be accessed via subscription (global_instance[part_type]).
+    Note that part_type dimensions specified through part_type_attributes can be accessed
+    via subscription inside the get_part_types_dimensions also.
+    """
 
     def __init__(
         self,
@@ -230,8 +254,8 @@ class DimensionData(BasicDimensionData):
         | tuple[tuple[int | float, int | float, int | float], dict[str, Any]],
     ]:
         """
-        Meant to be overriden by subclasses that needs dimensions for specific part types.
-        If overriden must return a mapping of part types to dimension tuples or (tuple, dict) pairs.
+        Subclasses should override this method to return a mapping of part types to dimension tuples.
+        Each value must be either (x_len, y_len, z_len) or ((x_len, y_len, z_len), extra_dict).
         """
         return {}
 
@@ -270,9 +294,8 @@ class BuilderABC(InheritanceMixin, ABC):
     Abstract base class for all Builder classes.
 
     Subclasses must:
-        1. Define part_types (Iterable[str] | type[StrEnum]).
-        2. Implement build methods for each part type.
-        3. Register each build method using @BuilderABC.register(part_type).
+        1. Implement build methods for each part type.
+        2. Register each build method using @BuilderABC.register(part_type).
 
     Custom __init__ methods (optional, for calculated dimensions etc) must:
         1. Accept dim (DimensionData) as its first argument.
@@ -322,7 +345,7 @@ class BuilderABC(InheritanceMixin, ABC):
         Builds the part for the given part_type.
 
         Args:
-            part_type: One of the parts in part_types/new_part_types or inherited part_types.
+            part_type: part type registered with @BuilderABC.register(part_type).
             cached_solid: If True, returns cached Solid object; else a new Workplane.
 
         Returns:
@@ -373,7 +396,6 @@ class AssemblerABC(InheritanceMixin, ABC):
 
     Subclasses must:
         1. Define BuilderClass (subclass of BuilderABC).
-        2. Define parts (Iterable[str] | type[StrEnum]).
         3. Define part_map which should be a dict mapping part: part_type (Builder).
         4. Implement method get_metadata_map which should returns
            metadata for each part specified in parts.
@@ -381,6 +403,8 @@ class AssemblerABC(InheritanceMixin, ABC):
     Shortcut:
         If parts is identical to BuilderClass.part_types,
         part_map can be omitted and will default to identity mapping.
+        Shortcut also works for inheritance scenarios where the new parts are identical
+        to new part_types even if previous parts/part_types where mapped explictly.
     """
 
     # attributes in _setup_attributes are only used during __init_subclass__. Deleted.
@@ -489,7 +513,25 @@ class AssemblerABC(InheritanceMixin, ABC):
 
     @abstractmethod
     def get_metadata_map(self) -> dict[str, dict]:
-        """Return metadata for each part in parts"""
+        """
+        Subclasses must implement this to return a mapping of part names to metadata.
+        Metadata should include loc, name, color. Note that the keys in below example
+        are StrAutoEnum members, but can be any string as long as they correspond
+        to part names in the part_map. Example dict that should be returned:
+        {
+            Part.BOTTOM: {
+                "loc": cq.Location((0, 0, self.assy_dst_btm)),
+                "name": "Part Name",
+                "color": cq.Color("burlywood"),
+            },
+            Part.LONG_SIDE: {
+                "loc": cq.Location((0, self.affy_dst_y, 0), (0, 0, 1), 180),
+                "name": "Long Side Panel",
+                "color": cq.Color("burlywood2"),
+            },
+            ...
+        }
+        """
 
     def _get_resolved_metadata_map(self) -> NormalizedDict[str, dict[str, Any]]:
         resolved_map = NormalizedDict(self.get_metadata_map())

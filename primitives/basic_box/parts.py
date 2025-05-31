@@ -4,9 +4,6 @@ from .project_data import PartType
 
 
 class Builder(BuilderABC):
-    top_divider_y = 300
-    top_divider_z = 300
-
     @BuilderABC.register(PartType.LONG_SIDE_PANEL)
     def get_long_side_panel(self) -> cq.Workplane:
         long = self.dim[PartType.LONG_SIDE_PANEL]
