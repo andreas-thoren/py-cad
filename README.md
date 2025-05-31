@@ -221,7 +221,6 @@ Feedback, issues, and pull requests are welcome!
 
 ## TODO
 
-* Add tests for BuilderABC and AssemblerABC. Especially regarding inheritance scenarios.
 * Enum subclass with my own auto implementation
 * Add included_parts and excluded_parts to AssemblerABC to specify which fields to inherit.
 * Update models.py docstrings and README.md after quite significant changes to models.py
