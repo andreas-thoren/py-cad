@@ -9,6 +9,17 @@ from enum import StrEnum
 from typing import Any, Generic, TypeVar
 import cadquery as cq
 
+
+class StrAutoEnum(StrEnum):
+    """
+    StrEnum that automatically assigns values based on the enum member name.
+    Useful for part types and other string-based enumerations.
+    """
+    @staticmethod
+    def _generate_next_value_(name, start, count, last_values):
+        return name.lower()
+
+
 K = TypeVar("K")
 V = TypeVar("V")
 

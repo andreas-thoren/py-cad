@@ -1,4 +1,5 @@
-from enum import StrEnum
+from enum import auto
+from helpers.models import StrAutoEnum
 from primitives.basic_box.project_data import BoxDimensionData, PartType
 
 # Basic dimensions
@@ -7,9 +8,9 @@ BOX_Y = 200
 BOX_Z = 200
 
 # Materials
-class Material(StrEnum):
-    PLYWOOD = "plywood"
-    SOLID_WOOD = "solid_wood"
+class Material(StrAutoEnum):
+    PLYWOOD = auto()
+    SOLID_WOOD = auto()
 
 # Material thicknesses map
 MATERIAL_THICKNESS_MAP = {

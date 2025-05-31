@@ -1,19 +1,19 @@
-from enum import StrEnum
-from helpers.models import DimensionData
+from enum import auto
+from helpers.models import StrAutoEnum, DimensionData
 
 
-class Part(StrEnum):
-    BOTTOM = "bottom"
-    LONG_SIDE = "long side"
-    LONG_SIDE_INVERSE = "long side inverse"
-    SHORT_SIDE = "short side"
-    SHORT_SIDE_INVERSE = "short side inverse"
+class Part(StrAutoEnum):
+    BOTTOM = auto()
+    LONG_SIDE = auto()
+    LONG_SIDE_INVERSE = auto()
+    SHORT_SIDE = auto()
+    SHORT_SIDE_INVERSE = auto()
 
 
-class PartType(StrEnum):
-    BOTTOM = "bottom"
-    LONG_SIDE_PANEL = "long side panel"
-    SHORT_SIDE_PANEL = "short side panel"
+class PartType(StrAutoEnum):
+    BOTTOM = auto()
+    LONG_SIDE_PANEL = auto()
+    SHORT_SIDE_PANEL = auto()
 
 
 PART_TYPE_MAP = {

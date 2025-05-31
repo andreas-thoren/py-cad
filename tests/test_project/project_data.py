@@ -1,5 +1,5 @@
-from enum import StrEnum
-from helpers.models import DimensionData
+from enum import auto
+from helpers.models import StrAutoEnum, DimensionData
 
 # Project dimensions
 BOX_X = 490
@@ -7,20 +7,20 @@ BOX_Y = 350
 BOX_Z = 540
 
 
-class Part(StrEnum):
-    BOTTOM = "bottom"
-    LONG_SIDE = "long side"
-    LONG_SIDE_INVERSE = "long side inverse"
-    SHORT_SIDE = "short side"
-    SHORT_SIDE_INVERSE = "short side inverse"
-    TOP = "top"
+class Part(StrAutoEnum):
+    BOTTOM = auto()
+    LONG_SIDE = auto()
+    LONG_SIDE_INVERSE = auto()
+    SHORT_SIDE = auto()
+    SHORT_SIDE_INVERSE = auto()
+    TOP = auto()
 
 
-class PartType(StrEnum):
-    BOTTOM = "bottom"
-    LONG_SIDE_PANEL = "long side panel"
-    SHORT_SIDE_PANEL = "short side panel"
-    TOP = "top"
+class PartType(StrAutoEnum):
+    BOTTOM = auto()
+    LONG_SIDE_PANEL = auto()
+    SHORT_SIDE_PANEL = auto()
+    TOP = auto()
 
 
 PART_TYPE_MAP = {
@@ -34,9 +34,9 @@ PART_TYPE_MAP = {
 
 
 # Materials
-class Material(StrEnum):
-    PLYWOOD = "plywood"
-    SOLID_WOOD = "solid_wood"
+class Material(StrAutoEnum):
+    PLYWOOD = auto()
+    SOLID_WOOD = auto()
 
 
 # Material thicknesses map
