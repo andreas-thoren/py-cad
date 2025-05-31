@@ -455,7 +455,9 @@ class AssemblerABC(InheritanceMixin, ABC):
         invalid_values = actual_values - allowed_values
         if invalid_values:
             raise ValueError(
-                f"{cls.__name__}: part_map contains invalid part type values: {invalid_values}"
+                f"{cls.__name__}: part_map contains invalid part type values "
+                "without registered build methods. Invalid values:\n"
+                f"{'\n'.join(invalid_values)}"
             )
 
     def __init__(self, dim: DimensionData):

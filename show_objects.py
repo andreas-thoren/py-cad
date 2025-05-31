@@ -60,20 +60,20 @@ def get_basic_box_part():
 
 def get_test_project():
     from tests.test_project.project_data import DIMENSION_DATA, Part
-    from tests.test_project.assembly import PartialAssemblerLeaf
+    from tests.test_project.assembly import PartialAssemblerOuterLeaf
 
-    assembler = PartialAssemblerLeaf(DIMENSION_DATA)
-    assembly_parts = [Part.BOTTOM, Part.LONG_SIDE, Part.SHORT_SIDE]
+    assembler = PartialAssemblerOuterLeaf(DIMENSION_DATA)
+    # assembly_parts = [Part.BOTTOM, Part.LONG_SIDE, Part.SHORT_SIDE]
     # assembly = assembler.assemble(assembly_parts)
     assembly = assembler.assemble()
     return assembly, "Garbage Sort Box Assembly"
 
 
 # assembly, name = get_garbage_sort_box()
-# assembly, name = get_test_project()
+assembly, name = get_test_project()
 # assembly, name = get_plywood_box_part()
 # assembly, name = get_plywood_box()
-assembly, name = get_basic_box()
+# assembly, name = get_basic_box()
 # assembly, name = get_basic_box_part()
 
 show_object(assembly, name)
