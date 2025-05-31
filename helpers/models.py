@@ -389,7 +389,7 @@ class AssemblerABC(InheritanceMixin, ABC):
         return self._resolved_part_map.copy()
 
     @staticmethod
-    def normalize_values(mapping: dict[str, Any]) -> dict[str, Any]:
+    def normalize_values(mapping: dict[Any, str]) -> dict[Any, str]:
         return {k: NormalizedDict.normalize_item(v) for k, v in mapping.items()}
 
     def __init_subclass__(cls, **kwargs):
