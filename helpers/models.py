@@ -469,6 +469,10 @@ class AssemblerABC(InheritanceMixin, ABC):
         return self._resolved_part_map.copy()
 
     @staticmethod
+    def assy_name(part: str) -> str:
+        return part.title().replace(" ", "_")
+
+    @staticmethod
     def normalize_values(mapping: dict[Any, str]) -> dict[Any, str]:
         return {k: NormalizedDict.normalize_item(v) for k, v in mapping.items()}
 
@@ -605,7 +609,7 @@ class AssemblerABC(InheritanceMixin, ABC):
 
         for part in parts:
             metadata: dict = resolved_metadata_map.get(part, {})
-            metadata.setdefault("name", part.title().replace("_", " "))
+            metadata.setdefault("name", self.assy_name(part))
             metadata.setdefault("color", self.color)
             part_type = self._resolved_part_map[part]
             solid = self.builder.build_part(part_type, cached_solid=True)

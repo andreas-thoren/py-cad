@@ -34,4 +34,4 @@ assy.constrain("green_box", "blue_box", "Point", param=5)
 assy.solve()
 
 # Show the result
-show_object(assy)
+# show_object(assy)
