@@ -6,7 +6,7 @@ class TestBasicDimensionData(unittest.TestCase):
 
     def test_basic_init_and_attributes(self):
         data = BasicDimensionData(
-            (1, 2, 3), a=10, b=20, freeze_existing_attributes=True
+            (1, 2, 3), a=10, b=20, freeze=True
         )
         self.assertEqual(data.x_len, 1)
         self.assertEqual(data.y_len, 2)
@@ -16,7 +16,7 @@ class TestBasicDimensionData(unittest.TestCase):
         self.assertTrue(data._freeze_existing_attributes)
 
     def test_frozen_after_init(self):
-        data = BasicDimensionData((1, 2, 3), freeze_existing_attributes=True)
+        data = BasicDimensionData((1, 2, 3), freeze=True)
         self.new_attribute = 42  # Allowed adding new attributes
         with self.assertRaises(AttributeError):
             data.x_len = 5
@@ -25,7 +25,7 @@ class TestBasicDimensionData(unittest.TestCase):
         class MyDim(BasicDimensionData):
             def __init__(self):
                 self.special = 123
-                super().__init__((4, 5, 6), freeze_existing_attributes=True)
+                super().__init__((4, 5, 6), freeze=True)
 
         inst = MyDim()
         self.assertEqual(inst.special, 123)
@@ -33,7 +33,7 @@ class TestBasicDimensionData(unittest.TestCase):
             inst.special = 456
 
     def test_no_changing_attributes_after_freeze(self):
-        data = BasicDimensionData()
+        data = BasicDimensionData(freeze=False)
         # Should be able to add before freeze
         data.new_attr = 123
         data.new_attr = 234  # Allowed to change before freeze
@@ -44,7 +44,7 @@ class TestBasicDimensionData(unittest.TestCase):
             data.new_attr = 456
 
     def test_freeze_without_basic_dimensions_raises(self):
-        data = BasicDimensionData()
+        data = BasicDimensionData(freeze=False)
         with self.assertRaises(ValueError):
             data.freeze_existing_attributes()
 
@@ -98,7 +98,7 @@ class TestDimensionData(unittest.TestCase):
             _ = dim["any_part"]
 
     def test_update_part_type_dim_formats(self):
-        dim = BasicDimensionData()
+        dim = BasicDimensionData(freeze=False)
         # Tuple format
         basic_dims, extra_dims = DimensionData._normalize_part_type_dimensions((1, 2, 3))
         dim.set_basic_dimensions(basic_dims, **extra_dims)
@@ -106,7 +106,7 @@ class TestDimensionData(unittest.TestCase):
         self.assertEqual(dim.y_len, 2)
         self.assertEqual(dim.z_len, 3)
         # Tuple+dict format
-        dim2 = BasicDimensionData()
+        dim2 = BasicDimensionData(freeze=False)
         basic_dims, extra_dims = DimensionData._normalize_part_type_dimensions(
             ((4, 5, 6), {"foo": 99})
         )

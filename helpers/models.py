@@ -40,7 +40,7 @@ class NormalizedDict(UserDict, Generic[K, V]):
     def normalize_item(key: K, raise_error: bool = False) -> str | Any:
         """
         Normalize keys to lowercase strings. If raise_error is False will return
-        the original key withouth raising if original key is not a string.
+        the original key without raising if original key is not a string.
         """
         try:
             return key.strip().lower()
@@ -93,10 +93,33 @@ class InheritanceMixin:
         return parent_items
 
 
-class BasicDimensionData:
+class _PostInitMeta(type):
+    """
+    Metaclass that ensures a '_post_init' method is always called after object construction.
+    Intended for use within the core framework only. Do not override `_post_init` in regular
+    subclasses. Only customize `_post_init` if extending the framework's base logic.
+    """
+
+    def __call__(cls, *args, **kwargs):
+        instance = super().__call__(*args, **kwargs)
+        if not hasattr(instance, "_post_init"):
+            raise TypeError(
+                f"Since class '{cls.__name__}' has metaclass=_PostInitMeta "
+                "it must implement a '_post_init' method."
+            )
+        instance._post_init(*args, **kwargs)
+        return instance
+
+
+class BasicDimensionData(metaclass=_PostInitMeta):
     """
     Stores basic dimensional data (x_len, y_len, z_len) with support for extra dynamic attributes.
     Supports dynamic extension and existing attributes can be 'frozen' to prevent modification.
+
+    Uses _PostInitMeta to ensure that freeze_existing_attributes (if freeze=True)
+    is always run after __init__. End users should not override the `_post_init` method.
+    Custom subclass __init__ methods should call (normally before custom logic):
+    super().__init__(basic_dimensions, freeze, **extra_dimension)
     """
 
     x_len: int | float
@@ -107,7 +130,7 @@ class BasicDimensionData:
     def __init__(
         self,
         basic_dimensions: tuple[int | float, int | float, int | float] | None = None,
-        freeze_existing_attributes: bool = False,
+        freeze: bool = True,
         **extra_dimensions: Any,
     ):
         """
@@ -116,14 +139,22 @@ class BasicDimensionData:
         This allows for flexible initialization and subclassing.
         """
 
+        # Initialized to False. Can be changed in _post_init or by freeze_existing_attributes().
+        self._freeze_existing_attributes = False
+
         if basic_dimensions is not None:
             self.set_basic_dimensions(basic_dimensions, **extra_dimensions)
         else:
             self._has_basic_dimensions = False
             self.update(**extra_dimensions)
 
-        if freeze_existing_attributes:
+        # Temp attribute to trigger freeze_existing_attributes in _post_init
+        self._freeze = freeze
+
+    def _post_init(self, *args, **kwargs) -> None:
+        if self._freeze:
             self.freeze_existing_attributes()
+            delattr(self, "_freeze")
 
     def update(self, **extra_dimensions: Any):
         """
@@ -189,12 +220,19 @@ class DimensionData(BasicDimensionData):
     Part types dimensions can then be accessed via subscription (global_instance[part_type]).
     Note that part_type dimensions specified through part_type_attributes can be accessed
     via subscription inside the get_part_types_dimensions also.
+
+    Inherits _PostInitMeta from BasicDimensionData that uses _post_init to ensure that
+    certain initialization logic is run after __init__. End users should not override
+    the `_post_init` method.
+    Custom subclass __init__ methods should call (normally before custom logic):
+    super().__init__(basic_dimensions, part_type_attributes, freeze, **extra_dimension)
     """
 
     def __init__(
         self,
         basic_dimensions: tuple[int | float, int | float, int | float],
         part_type_attributes: dict[str, Any] | None = None,
+        freeze: bool = True,
         **extra_dimensions: Any,
     ):
         """
@@ -209,7 +247,11 @@ class DimensionData(BasicDimensionData):
             extra_dimensions: Additional dimensions as keyword arguments.
         """
         # Call super init first to set project basic dimensions.
-        super().__init__(basic_dimensions=basic_dimensions, **extra_dimensions)
+        super().__init__(
+            basic_dimensions=basic_dimensions,
+            freeze=freeze,
+            **extra_dimensions,
+        )
 
         # Initialize _part_types_dimensions as a NormalizedDict
         self._part_types_dimensions = NormalizedDict()
@@ -225,21 +267,24 @@ class DimensionData(BasicDimensionData):
 
             for part_type, val in dict_val.items():
                 basic_dim_data = self._part_types_dimensions.setdefault(
-                    part_type, BasicDimensionData()
+                    part_type, BasicDimensionData(freeze=False)
                 )
                 setattr(basic_dim_data, attr, val)
 
-        # Call get_part_types_dimensions -> convert to a NormalizedDict instance
-        # A
+    def _post_init(self, *args, **kwargs):
+        self._add_part_types_dimensions()
+        # super init placed last since it calls freeze_existing_attributes
+        super()._post_init(*args, **kwargs)
+
+    def _add_part_types_dimensions(self) -> None:
         new_part_types_dimensions = NormalizedDict(**self.get_part_types_dimensions())
         for part_type, dimensions in new_part_types_dimensions.items():
             basic_dim_data: BasicDimensionData = self._part_types_dimensions.setdefault(
-                part_type, BasicDimensionData()
+                part_type, BasicDimensionData(freeze=False)
             )
             basic_dims, extra_dims = self._normalize_part_type_dimensions(dimensions)
             basic_dim_data.set_basic_dimensions(basic_dims, **extra_dims)
             basic_dim_data.freeze_existing_attributes()
-        self.freeze_existing_attributes()  # basic dimensions are set at super().__init__.
 
     @property
     def part_types_dimensions(self) -> NormalizedDict[str, BasicDimensionData]:

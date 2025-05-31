@@ -37,14 +37,13 @@ class BoxDimensionData(DimensionData):
         mat_thickness: dict[PartType, float],
         route_depth: float = 0.0,
     ):
+        part_type_attributes = {"mat_thickness": mat_thickness}
+        super().__init__((x_len, y_len, z_len), part_type_attributes)
         self.route_depth = route_depth
         self.routed_x_len = mat_thickness[PartType.SHORT_SIDE_PANEL] - route_depth
         self.routed_y_len = mat_thickness[PartType.LONG_SIDE_PANEL] - route_depth
         self.routed_z_len = mat_thickness[PartType.TOP] - route_depth
         self.panel_z_len = z_len - self.routed_z_len
-        part_type_attributes = {"mat_thickness": mat_thickness}
-        # Should be called last so that get_part_types_dimensions can access attributes above
-        super().__init__((x_len, y_len, z_len), part_type_attributes)
 
     def get_part_types_dimensions(self) -> dict[PartType, BasicDimensionData]:
         panel_y = self.y_len - 2 * self.routed_y_len
