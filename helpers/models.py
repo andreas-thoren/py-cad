@@ -540,7 +540,7 @@ class AssemblerABC(InheritanceMixin, ABC):
                 f"{'\n'.join(invalid_values)}"
             )
 
-    def __init__(self, dim: DimensionData):
+    def __init__(self, dim: DimensionData, color: cq.Color | None = None):
         """
         Initialize assembler and builder.
 
@@ -549,6 +549,7 @@ class AssemblerABC(InheritanceMixin, ABC):
                 the dimensions of the assembly.
         """
         self._dim = dim
+        self.color = color or cq.Color("burlywood")
         self.builder = self._BuilderClass(dim)
 
     @property
@@ -603,10 +604,9 @@ class AssemblerABC(InheritanceMixin, ABC):
         resolved_metadata_map = self._get_resolved_metadata_map()
 
         for part in parts:
-            if part not in resolved_metadata_map:
-                raise ValueError(f"Missing metadata for part: {part}")
-
-            metadata = resolved_metadata_map[part]
+            metadata: dict = resolved_metadata_map.get(part, {})
+            metadata.setdefault("name", part.title().replace("_", " "))
+            metadata.setdefault("color", self.color)
             part_type = self._resolved_part_map[part]
             solid = self.builder.build_part(part_type, cached_solid=True)
             data.append((solid, metadata))

@@ -47,11 +47,6 @@ class TestAssemblerABC(unittest.TestCase):
         self.assertIsInstance(assembly, Assembly)
         self.assertEqual(len(assembly.children), len(Part))
 
-    def test_missing_metadata(self):
-        # Test missing metadata handling
-        with self.assertRaises(ValueError):
-            self.assembler.assemble(parts=["nonexistent_part"])
-
     def test_setup_attribute_removal(self):
         setup_attributes = self.assembler._setup_attributes
         for attr in setup_attributes:
