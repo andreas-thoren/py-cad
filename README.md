@@ -221,6 +221,8 @@ Feedback, issues, and pull requests are welcome!
 
 ## TODO
 
+* AssemberABC should add default: names, color if not provided. It should be possible to omit the part entirely and it should be added with default name and color. Change _get_assembly_data to make this possible.
+* AssemblerABC should accept constrains.
 * Update README.md after quite significant changes to models.py
 * Add included_parts and excluded_parts to AssemblerABC to specify which fields to inherit.
 * Add class-level descriptors to signal configuration-only attributes after subclass creation
