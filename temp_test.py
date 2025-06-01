@@ -17,18 +17,28 @@ assy.add(box, name="blue_box", color=cq.Color("blue"))
 
 # --- 1️⃣ Constrain by center between two named parts
 # assy.constrain("circle", "red_box", "Point")
-assy.constrain("circle", "red_box", "Point")
+try:
+    assy.constrain("circle", "red_box", "Point")
+except KeyError as exc:
+    pass
 
+print(len(assy.constraints))
 # --- 2️⃣ Constrain using a specific Vertex on the circle edge
 # Get a point ~50% around the circle
 position = circle_edge.positionAt(0.5)
 vertex = cq.Vertex.makeVertex(*position.toTuple())
 
-assy.constrain("circle", vertex, "green_box", box.val(), "Point")
+try:
+    assy.constrain("circle", vertex, "green_box", box.val(), "Point")
+except KeyError as exc:
+    pass
 
 # --- 3️⃣ Constrain with a distance offset (param)
 # This keeps blue_box at least 5 units away from green_box's center
-assy.constrain("green_box", "blue_box", "Point", param=5)
+try:
+    assy.constrain("green_box", "blue_box", "Point", param=5)
+except KeyError as exc:
+    pass
 
 # Solve the assembly
 assy.solve()
