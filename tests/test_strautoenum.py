@@ -1,6 +1,6 @@
 import unittest
 from enum import auto
-from helpers.models import StrAutoEnum
+from py_cad import StrAutoEnum
 
 
 class TestStrAutoEnum(unittest.TestCase):

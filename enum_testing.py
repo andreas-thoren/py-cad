@@ -1,4 +1,4 @@
-from helpers.enum_helpers import create_str_enum, extend_str_enum
+from src.enum_helpers import create_str_enum, extend_str_enum
 
 Enum1 = create_str_enum("Enum1", ["member 1", "member 2"])
 print("Enum1 members:")

@@ -1,5 +1,5 @@
 import cadquery as cq
-from helpers.models import BuilderABC
+from py_cad import BuilderABC
 from .project_data import PartType
 
 
@@ -51,6 +51,7 @@ class PartialBuilderLeaf(PartialBuilderMid):
             .rect(short.y_len, bottom_thickness)
             .cutBlind(-self.dim.route_depth)
         )
+
 
 class PartialBuilderOuterLeaf(PartialBuilderLeaf):
     @BuilderABC.register(PartType.TOP)

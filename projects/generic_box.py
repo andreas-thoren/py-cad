@@ -1,16 +1,18 @@
 from enum import auto
-from helpers.models import StrAutoEnum
-from primitives.basic_box.project_data import BoxDimensionData, PartType
+from py_cad import StrAutoEnum
+from py_cad.primitives.basic_box.project_data import BoxDimensionData, PartType
 
 # Basic dimensions
 BOX_X = 400
 BOX_Y = 200
 BOX_Z = 200
 
+
 # Materials
 class Material(StrAutoEnum):
     PLYWOOD = auto()
     SOLID_WOOD = auto()
+
 
 # Material thicknesses map
 MATERIAL_THICKNESS_MAP = {

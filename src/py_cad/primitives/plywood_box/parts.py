@@ -1,5 +1,5 @@
 import cadquery as cq
-from helpers.models import BuilderABC, DimensionData
+from py_cad import BuilderABC, DimensionData
 from .project_data import PartType
 
 
@@ -35,7 +35,9 @@ class Builder(BuilderABC):
         return (
             cq.Workplane("XY")
             .box(
-                self.dim.x_len, self.dim.y_len, self.dim.mat_thickness - self.dim.route_depth
+                self.dim.x_len,
+                self.dim.y_len,
+                self.dim.mat_thickness - self.dim.route_depth,
             )
             .faces(">Z")
             .workplane()

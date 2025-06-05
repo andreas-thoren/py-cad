@@ -1,5 +1,5 @@
 from enum import auto
-from helpers.models import StrAutoEnum, BasicDimensionData, DimensionData
+from py_cad import StrAutoEnum, DimensionData
 
 
 class Part(StrAutoEnum):
@@ -45,7 +45,7 @@ class BoxDimensionData(DimensionData):
         self.routed_z_len = mat_thickness[PartType.TOP] - route_depth
         self.panel_z_len = z_len - self.routed_z_len
 
-    def get_part_types_dimensions(self) -> dict[PartType, BasicDimensionData]:
+    def get_part_types_dimensions(self):
         panel_y = self.y_len - 2 * self.routed_y_len
         btm_x = self.x_len - 2 * self.routed_x_len
         btm_z = self[PartType.BOTTOM].mat_thickness
@@ -56,10 +56,14 @@ class BoxDimensionData(DimensionData):
         return {
             PartType.BOTTOM: (btm_x, panel_y, btm_z),
             PartType.LONG_SIDE_PANEL: (
-                self.x_len, long_panel_thickness, self.panel_z_len
+                self.x_len,
+                long_panel_thickness,
+                self.panel_z_len,
             ),
             PartType.SHORT_SIDE_PANEL: (
-                short_panel_thickness, panel_y, self.panel_z_len
+                short_panel_thickness,
+                panel_y,
+                self.panel_z_len,
             ),
             PartType.TOP: (self.x_len, self.y_len, top_z),
         }

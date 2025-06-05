@@ -1,6 +1,6 @@
 import unittest
 from enum import StrEnum
-from helpers.enum_helpers import create_str_enum, extend_str_enum
+from py_cad.enum_helpers import create_str_enum, extend_str_enum
 
 
 class TestEnumHelpers(unittest.TestCase):

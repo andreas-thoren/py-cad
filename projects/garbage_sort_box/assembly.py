@@ -1,5 +1,5 @@
 import cadquery as cq
-from helpers.models import AssemblerABC, DimensionData
+from py_cad import AssemblerABC, DimensionData
 from .parts import Builder
 from .project_data import Part, PART_TYPE_MAP
 

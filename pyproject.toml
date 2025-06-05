@@ -11,5 +11,15 @@ authors = [
 
 dependencies = [
   "cadquery",
-  "CQ-editor",
+  # "CQ-editor",  # Kan installeras separat om du vill använda CQ-editor
 ]
+
+[project.optional-dependencies]
+dev = ["black"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

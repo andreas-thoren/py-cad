@@ -1,6 +1,11 @@
 import cadquery as cq
-from helpers.models import AssemblerABC, DimensionData
-from .parts import PartialBuilderLeaf, PartialBuilderMid, PartialBuilderBase, PartialBuilderOuterLeaf
+from py_cad import AssemblerABC, DimensionData
+from .parts import (
+    PartialBuilderLeaf,
+    PartialBuilderMid,
+    PartialBuilderBase,
+    PartialBuilderOuterLeaf,
+)
 from .project_data import Part, PartType
 
 
@@ -89,6 +94,7 @@ class PartialAssemblerLeaf(PartialAssemblerMidOne, PartialAssemblerMidTwo):
                 "color": cq.Color("burlywood4"),
             },
         }
+
 
 class PartialAssemblerOuterLeaf(PartialAssemblerLeaf):
     BuilderClass = PartialBuilderOuterLeaf

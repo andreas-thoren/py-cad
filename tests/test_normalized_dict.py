@@ -1,5 +1,5 @@
 import unittest
-from helpers.models import NormalizedDict
+from py_cad.core import NormalizedDict
 
 
 class TestNormalizedDict(unittest.TestCase):

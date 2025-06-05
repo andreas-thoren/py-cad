@@ -1,4 +1,4 @@
-from primitives.plywood_box.project_data import BoxDimensionData
+from py_cad.primitives.plywood_box.project_data import BoxDimensionData
 
 # Project dimensions
 BOX_X = 300
