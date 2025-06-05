@@ -40,7 +40,6 @@ Define:
 * **`Part`** — all unique parts in the assembly (`StrAutoEnum` or iterable of strings)
 * **`PartType`** — unique part templates
 * **`PART_TYPE_MAP`** — mapping from `Part` to `PartType`
-* **`DIMENSION_DATA`** — a `DimensionData` instance (subclass if you need more fields)
 
 ```python
 from enum import auto
