@@ -161,8 +161,8 @@ Once initialized, all dimensions and attributes per part type can be accessed li
 
 ```python
 dim_data = MyDimensionData(...)
-length = dim_data["my_part_type"].x_len
-thickness = dim_data["my_part_type"].material_thickness
+thickness = dim_data[PartType.BOTTOM].material_thickness # Available through part_type_attributes
+length = dim_data[PartType.BOTTOM].x_len # Set in get_part_types_dimensions
 ```
 
 This applies to:
