@@ -373,6 +373,7 @@ class AssemblerABC(InheritanceMixin, ABC):
 
     @staticmethod
     def assy_name(part: str) -> str:
+        "Returns the default name for the specified part in the assembly."
         return part.title().replace(" ", "_")
 
     @staticmethod
