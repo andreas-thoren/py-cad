@@ -100,10 +100,24 @@ If all your parts have a unique template, just omit `part_types` and `PART_TYPE_
 
 ### ▶️ DimensionData Subclassing and instantiation
 
-Subclass DimensionData:
+`DimensionData` enables managing global dimensions **alongside part-specific dimensions and attributes**.
+Subclassing it allows you to define additional dimension logic for individual part types in your CAD assemblies.
 
-* Custom __init__ is often needed for extra dimension variables. Call super().__init__(...) after defining part_type_attributes (if any).
-* Define get_part_types_dimensions that should return a tuple with basic dimensions + an optional dict with extra named dimensions and their values. See method docstring for more details.
+A typical subclass involves:
+
+#### 1. Custom `__init__`
+
+* Sets additional calculated dimensions or variables.
+* Calls `super().__init__(basic_dimensions, part_type_attributes, ...)` to initialize core dimension data.
+* `part_type_attributes` allows setting custom attributes (e.g., material thickness, hole diameter) that vary per part type.
+
+#### 2. Implementing `get_part_types_dimensions`
+
+* Defines the explicit dimensions (and optional additional attributes) for each part type.
+* Must return a dictionary mapping each `part_type` (string or enum) to either:
+
+  * A simple `(x_len, y_len, z_len)` tuple.
+  * A tuple containing `(x_len, y_len, z_len)` plus a dictionary of additional named dimensions.
 
 **Note:**
 For simple projects subclassing DimensionData is not always needed. In those cases just create an instance of DimensionData directly.
@@ -140,6 +154,21 @@ BOX_DIMENSIONS = BoxDimensionData(
     400, 200, 200, PART_TYPE_THICKNESS_MAP, route_depth=ROUTE_DEPTH
 )
 ```
+
+#### 🔍 Accessing Per-Part-Type Dimensions and Attributes
+
+Once initialized, all dimensions and attributes per part type can be accessed like a dictionary:
+
+```python
+dim_data = MyDimensionData(...)
+length = dim_data["my_part_type"].x_len
+thickness = dim_data["my_part_type"].material_thickness
+```
+
+This applies to:
+
+* Dimensions returned via `get_part_types_dimensions`
+* Attributes defined via `part_type_attributes`
 
 ---
 
