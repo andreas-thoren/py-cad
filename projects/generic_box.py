@@ -1,6 +1,6 @@
 from enum import auto
 from py_cad import StrAutoEnum
-from py_cad.primitives.basic_box.project_data import BoxDimensionData, PartType
+from py_cad.primitives.basic_box import Assembler, Builder, BoxDimensionData, PartType
 
 # Basic dimensions
 BOX_X = 400
@@ -41,3 +41,12 @@ ROUTE_DEPTH = MATERIAL_THICKNESS_MAP[Material.SOLID_WOOD] / 2
 BOX_DIMENSIONS = BoxDimensionData(
     BOX_X, BOX_Y, BOX_Z, PART_TYPE_THICKNESS_MAP, route_depth=ROUTE_DEPTH
 )
+
+
+def get_builder():
+    """Get the Builder instance for the basic box."""
+    return Builder(BOX_DIMENSIONS)
+
+
+def get_assembler(visual_offset: int = 0):
+    return Assembler(BOX_DIMENSIONS, visual_offset=visual_offset)
