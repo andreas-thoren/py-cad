@@ -253,7 +253,7 @@ class Assembler(AssemblerABC):
 ```python
 assembler = Assembler(BOX_DIMENSIONS)
 assembly = assembler.assemble()
-show_object(assembly, "basic_box")
+show_object(assembly, "basic_box") # If using CQ-editor
 ```
 
 ---
