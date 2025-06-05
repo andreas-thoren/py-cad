@@ -11,7 +11,7 @@
 ## Design Philosophy
 
 All **part names** and **metadata keys** are normalized to lowercase strings internally.
-**Both `str` and `StrAutoEnum`** (or other string-like enums) are accepted in external APIs and project definitions. Use of **`StrAutoEnum`** with `auto()` as values is recommmended.
+**Both `str` and `StrAutoEnum`** (or other string-like enums) are accepted in external APIs and project definitions. Use of **`StrAutoEnum`** with `auto()` as values is recommended.
 
 ---
 
@@ -33,7 +33,7 @@ This example demonstrates a complete setup using enums, dimension logic, part bu
 
 > All code can be kept in a single file or organized across modules.
 
-### ▶️ Define parts, part types and project variables
+### ▶️ Define parts, part types, part_type_map and project variables
 
 Define:
 
@@ -100,7 +100,13 @@ If all your parts have a unique template, just omit `part_types` and `PART_TYPE_
 
 ### ▶️ DimensionData Subclassing and instantiation
 
-Subclass DimensionData if extra instance variables are needed (see example), create instance with project vars.
+Subclass DimensionData:
+
+* Custom __init__ is often needed for extra dimension variables. Call super().__init__(...) after defining part_type_attributes (if any).
+* Define get_part_types_dimensions that should return a tuple with basic dimensions + an optional dict with extra named dimensions and their values. See method docstring for more details.
+
+**Note:**
+For simple projects subclassing DimensionData is not always needed. In those cases just create an instance of DimensionData directly.
 
 ```python
 from py_cad import DimensionData
@@ -139,7 +145,10 @@ BOX_DIMENSIONS = BoxDimensionData(
 
 ### ▶️ Builder Definition
 
-Subclass `BuilderABC` and define a **build method for each part type**. Register each method with `@BuilderABC.register(...)`.
+Subclass `BuilderABC`: 
+
+* Define a **build method for each part type**. Register each method with `@BuilderABC.register(...)`.
+* A custom __init__ is usually not needed since dimensions should primarily be added to the DimensionData instance and not the builder instance.
 
 ```python
 import cadquery as cq
@@ -200,7 +209,7 @@ class Builder(BuilderABC):
 Subclass `AssemblerABC`:
 
 * Set `BuilderClass` to your builder class
-* Set `part_map` (mapping part → part\_type; omit if 1:1)
+* Set `part_map` (mapping part → part_type; omit if 1:1)
 * Implement `get_metadata_map` which should return a mapping with parts as keys and dicts with keyword arguments for cq.Assembly().add as values. If name or color are not specified for a part, default values will be used automatically.
 * __init__ can optionally be provided as per below. Remember to call super().__init__(dim).
 
@@ -282,7 +291,7 @@ show_object(assembly, "my_assembly") # If using CQ-editor
 ## Advanced Features
 
 * **Subclasses:** You can subclass `DimensionData` if you need more fields for your project.
-* **Inheritance:** Builder and Assembler classes support inheritance; all attributes are internally normalized and resolved. Parent build methods are accessible from builder subclasses. Assembly metadata provided in parent assemblers are also accessible in child assemblers. If same part or part type is defined in child and parent child definition wins.
+* **Inheritance:** Builder and Assembler classes support inheritance; all attributes are internally normalized and resolved. Parent build methods are accessible from builder subclasses. Assembly metadata provided in parent assemblers are also accessible in child assemblers. If same part or part type is defined in child and parent child definition takes precedence.
 * **Error messages:** If mappings are incomplete or inconsistent, detailed error messages are provided at class creation time.
 
 ---
