@@ -69,15 +69,16 @@ class InheritanceMixin:
         # Loop through ancestors creating parent_items
         parent_items = None
         for base in cls.__mro__[1:]:
-            older_parent_items = getattr(base, attr_name, None)
-            if older_parent_items is None:
+            current_items = getattr(base, attr_name, None)
+            if current_items is None:
                 continue
 
             if parent_items is None:
-                parent_items = older_parent_items
+                parent_items = current_items
             else:
-                # Younger parents come first in mro and should override older parents
-                parent_items = older_parent_items | parent_items
+                # parent_items already holds younger entries; merging older
+                # current_items in this direction lets younger win on collision.
+                parent_items = current_items | parent_items
 
         return parent_items
 

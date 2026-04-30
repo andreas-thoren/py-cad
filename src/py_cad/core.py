@@ -73,7 +73,12 @@ class BasicDimensionData(metaclass=_PostInitMeta):
         **extra_dimensions: Any,
     ) -> None:
         """Set the main x_len, y_len, and z_len dimensions (and optional additional attributes)."""
-        if not isinstance(basic_dimensions, Sequence) or len(basic_dimensions) != 3:
+        if (
+            not isinstance(basic_dimensions, Sequence)
+            or isinstance(basic_dimensions, str)
+            or len(basic_dimensions) != 3
+            or not all(isinstance(d, (int, float)) for d in basic_dimensions)
+        ):
             raise TypeError(
                 "basic_dimensions must be a Sequence (tuple, list, ...) of three numbers (x_len, y_len, z_len)."
             )
@@ -344,8 +349,8 @@ class AssemblerABC(InheritanceMixin, ABC):
 
     Subclasses must:
         1. Define BuilderClass (subclass of BuilderABC).
-        3. Define part_map which should be a dict mapping part: part_type (Builder).
-        4. Implement method get_metadata_map which should returns
+        2. Define part_map which should be a dict mapping part: part_type (Builder).
+        3. Implement method get_metadata_map which should returns
            metadata for each part specified in parts.
 
     Shortcut:

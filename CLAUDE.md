@@ -64,7 +64,7 @@ uv run black .
 - `src/py_cad/core.py` — the four ABCs + `BasicDimensionData`/`DimensionData`. The whole framework is here.
 - `src/py_cad/helpers.py` — `StrAutoEnum`, `NormalizedDict`, `InheritanceMixin`, `_PostInitMeta`.
 - `src/py_cad/enum_helpers.py` — `create_str_enum`, `extend_str_enum`, etc. **Not** in `__init__.py`'s public API; users must `from py_cad.enum_helpers import ...`.
-- `src/py_cad/primitives/{basic_box,plywood_box}/` — example builders/assemblers shipped with the package. The two `BoxDimensionData`s have **different** signatures (basic_box's is a real subclass with per-part-type thickness dict; plywood_box's is just `DimensionData` aliased).
+- `src/py_cad/primitives/{basic_box,plywood_box}/` — example builders/assemblers shipped with the package. Only `basic_box` defines its own `BoxDimensionData` subclass (per-part-type thickness dict); `plywood_box` uses the bare `DimensionData` directly with a scalar `mat_thickness`.
 - `tests/test_project/` — fixtures used by `test_assembler.py` and `test_builder.py`. Multi-level inheritance (`Base → Mid → Leaf → OuterLeaf`) is the heart of the test suite.
 - `projects/garbage_sort_box/` — real consumer project (woodworking).
 

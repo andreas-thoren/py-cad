@@ -15,7 +15,7 @@ class TestBasicDimensionData(unittest.TestCase):
 
     def test_frozen_after_init(self):
         data = BasicDimensionData((1, 2, 3), freeze=True)
-        self.new_attribute = 42  # Allowed adding new attributes
+        data.new_attribute = 42  # Allowed adding new attributes
         with self.assertRaises(AttributeError):
             data.x_len = 5
 

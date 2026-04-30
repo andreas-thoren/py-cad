@@ -67,10 +67,10 @@ def get_test_project():
     return assy, "Garbage Sort Box Assembly"
 
 
-assembly, name = get_garbage_sort_box()
+# assembly, name = get_garbage_sort_box()
 # assembly, name = get_test_project()
 # assembly, name = get_plywood_box_part()
-# assembly, name = get_plywood_box()
+assembly, name = get_plywood_box()
 # assembly, name = get_basic_box()
 # assembly, name = get_basic_box_part()
 

@@ -32,149 +32,63 @@ Files touched:
 
 ---
 
-### [ ] `set_basic_dimensions` doesn't reject strings
+### [x] `set_basic_dimensions` doesn't reject strings
 
-**Where:** `src/py_cad/core.py:76-79`
+**Resolution (2026-04-30):** Applied the proposed fix in `src/py_cad/core.py:76-83` — added `isinstance(basic_dimensions, str)` rejection and per-element `isinstance(d, (int, float))` validation. `BasicDimensionData("abc")` now raises `TypeError` instead of silently accepting `x_len="a"`. The 43-test suite still passes.
 
-```python
-if not isinstance(basic_dimensions, Sequence) or len(basic_dimensions) != 3:
-    raise TypeError(...)
-```
-
-A 3-character string is a `Sequence` of length 3. `BasicDimensionData("abc")` would silently set `x_len="a"`, `y_len="b"`, `z_len="c"` and pass validation.
-
-**Fix:** add `or isinstance(basic_dimensions, str)` to the check, or check that each element is a number:
-
-```python
-if (
-    not isinstance(basic_dimensions, Sequence)
-    or isinstance(basic_dimensions, str)
-    or len(basic_dimensions) != 3
-    or not all(isinstance(d, (int, float)) for d in basic_dimensions)
-):
-    raise TypeError(...)
-```
+Edge case left unaddressed: `bytes`/`bytearray` of length 3 still pass (their elements are `int`). If that ever becomes a real concern, add `or isinstance(basic_dimensions, (bytes, bytearray))` to the check.
 
 ---
 
 ## Priority 2 — Misleading code (no incorrect behavior, but readers will trip)
 
-### [ ] Dead test assertion in `test_dimension_data.py:18`
+### [x] Dead test assertion in `test_dimension_data.py:18`
 
-```python
-def test_frozen_after_init(self):
-    data = BasicDimensionData((1, 2, 3), freeze=True)
-    self.new_attribute = 42  # Allowed adding new attributes  ← self is TestCase, not data
-    with self.assertRaises(AttributeError):
-        data.x_len = 5
-```
-
-The assertion below it (`data.x_len = 5` raises) does test the right thing, but line 18 sets an attribute on the `TestCase` instance, not on `data`. The comment misleads. Either delete line 18 or change to `data.new_attribute = 42` (which should NOT raise, since you can add new attrs after freeze if they didn't exist before — verify the intent first).
+**Resolution (2026-04-30):** Changed `self.new_attribute = 42` → `data.new_attribute = 42`. The line now correctly demonstrates that adding a *new* attribute after freeze is allowed (the implicit assertion is "doesn't raise"), complementing the existing assertion below that modifying an *existing* attribute raises. Verified by re-reading `BasicDimensionData.__setattr__`: the freeze check only fires when `name in self.__dict__`, so genuinely new attributes pass through.
 
 ---
 
-### [ ] `older_parent_items` is misnamed in `helpers.py:71-82`
+### [x] `older_parent_items` is misnamed in `helpers.py:71-82`
 
-In `InheritanceMixin.get_parent_items`, the variable `older_parent_items` is set on the first iteration to the *youngest* parent (`cls.__mro__[1]` = immediate parent). It only becomes "older" in iterations 2+. The name confused me when reading; rename to `current_base_items` or just `base_items`.
-
-```python
-for base in cls.__mro__[1:]:
-    base_items = getattr(base, attr_name, None)
-    if base_items is None:
-        continue
-    if parent_items is None:
-        parent_items = base_items
-    else:
-        parent_items = base_items | parent_items  # younger overrides older
-```
+**Resolution (2026-04-30):** Renamed `older_parent_items` → `current_items` in `InheritanceMixin.get_parent_items`. Pairs naturally with the loop iteration, stays generic over `set`/`dict` (preserves the type hint), and drops the misleading age implication. Also rewrote the inline comment to clarify the merge direction (`parent_items` accumulates younger-precedent entries; merging older `current_items` on the left lets younger win on collision).
 
 ---
 
-### [ ] `AssemblerABC` docstring numbers requirements 1, 3, 4 (skips 2)
+### [x] `AssemblerABC` docstring numbers requirements 1, 3, 4 (skips 2)
 
-**Where:** `src/py_cad/core.py:341-356`
-
-Cosmetic but jarring. Renumber to 1, 2, 3.
+**Resolution (2026-04-30):** Fixed by user. Now numbered 1, 2, 3 in `src/py_cad/core.py:350-354`.
 
 ---
 
-### [ ] `tests/test_normalized_dict.py:2` imports from wrong module
+### [x] `tests/test_normalized_dict.py:2` imports from wrong module
 
-```python
-from py_cad.core import NormalizedDict   # works because core re-imports from helpers
-```
-
-Canonical path is `from py_cad.helpers import NormalizedDict`. Fragile if you ever clean up `core.py`'s imports.
+**Resolution (2026-04-30):** Fixed by user. Now imports `from py_cad.helpers import NormalizedDict` directly.
 
 ---
 
 ## Priority 3 — Architectural friction (worth thinking about)
 
-### [ ] Three names for one project
+### [x] Three names for one project
 
-| Name | Where |
-|---|---|
-| `py-cad` | repo folder, README title, GitHub URL |
-| `athor-sketches` | distribution name (`pyproject.toml:2`) |
-| `py_cad` | actual import |
-
-Whoever picks this up later (you, in 6 months) will lose time to it. Lowest-cost fix: rename `pyproject.toml` `name` to `py-cad`. That makes the distribution name match the repo name; the import name stays `py_cad` (PyPI convention: hyphens in distribution → underscores in import).
-
-```toml
-# pyproject.toml
-name = "py-cad"  # was "athor-sketches"
-```
-
-After renaming, regenerate the lock: `uv lock`.
+**Resolution (2026-04-30):** Fixed by user. Distribution renamed `athor-sketches` → `py-cad` in `pyproject.toml:2`; lockfile regenerated. Now consistent: distribution `py-cad`, repo `py-cad`, import `py_cad` (the underscore form is the standard hyphen → underscore PyPI convention).
 
 ---
 
-### [ ] `enum_helpers` is the most useful module for new users but isn't in the public API
+### [x] `enum_helpers` is the most useful module for new users but isn't in the public API
 
-`from py_cad import StrAutoEnum` works; `from py_cad import create_str_enum, extend_str_enum` doesn't. Users who want to dynamically build enums (the obvious power-user use case) have to know the internal layout (`from py_cad.enum_helpers import …`).
-
-**Fix:** re-export the public functions:
-
-```python
-# src/py_cad/__init__.py
-from .core import BasicDimensionData, DimensionData, BuilderABC, AssemblerABC
-from .helpers import StrAutoEnum, NormalizedDict
-from .enum_helpers import create_str_enum, extend_str_enum
-
-__all__ = [
-    "BasicDimensionData", "DimensionData", "BuilderABC", "AssemblerABC",
-    "StrAutoEnum", "NormalizedDict",
-    "create_str_enum", "extend_str_enum",
-]
-```
-
-`NormalizedDict` is debatable but useful enough that exposing it costs little.
+**Resolution (2026-04-30):** `src/py_cad/__init__.py` now re-exports `NormalizedDict` (from `helpers`) and `create_str_enum`/`extend_str_enum` (from `enum_helpers`). All available as `from py_cad import …`. Verified by smoke test.
 
 ---
 
-### [ ] The two `BoxDimensionData`s have the same name but different contracts
+### [x] The two `BoxDimensionData`s have the same name but different contracts
 
-- `src/py_cad/primitives/basic_box/project_data.py:31` — real `DimensionData` subclass; `mat_thickness` is a **dict** mapping part types to thicknesses
-- `src/py_cad/primitives/plywood_box/project_data.py:30` — `BoxDimensionData = DimensionData` (alias); expected `mat_thickness` as a **scalar**
-
-Same type name, incompatible call shapes. Confusing if you import `BoxDimensionData` from one and accidentally use the other's API.
-
-**Fix:** rename one. `PlywoodBoxDimensionData = DimensionData` is fine since plywood-box doesn't actually need a custom subclass. Or: drop the alias entirely from `plywood_box/project_data.py:30` and let users import `DimensionData` directly.
+**Resolution (2026-04-30):** Picked **drop the alias** — `BoxDimensionData = DimensionData` removed from `plywood_box/project_data.py`. Only consumer (`projects/generic_plywood_box.py`) updated to import `DimensionData` directly. If plywood-box later needs per-panel thickness logic, add a real subclass then. Naming collision is gone — only `basic_box` ships a `BoxDimensionData` now.
 
 ---
 
-### [ ] `Part.TOP: PartType.BOTTOM` in plywood_box is uncommented
+### [x] `Part.TOP: PartType.BOTTOM` in plywood_box is uncommented
 
-**Where:** `src/py_cad/primitives/plywood_box/project_data.py:26`
-
-```python
-PART_TYPE_MAP = {
-    ...
-    Part.TOP: PartType.BOTTOM,   # ← top reuses BOTTOM geometry
-}
-```
-
-Probably intentional — the plywood box top is visually identical to the bottom — but a one-line comment would save the next reader a head-scratch.
+**Resolution (2026-04-30):** Added inline comment in `plywood_box/project_data.py` above the `Part.TOP` mapping: "Top reuses BOTTOM geometry — for this style the panels are visually identical."
 
 ---
 

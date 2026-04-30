@@ -23,8 +23,6 @@ PART_TYPE_MAP = {
     Part.LONG_SIDE_INVERSE: PartType.LONG_SIDE_PANEL,
     Part.SHORT_SIDE: PartType.SHORT_SIDE_PANEL,
     Part.SHORT_SIDE_INVERSE: PartType.SHORT_SIDE_PANEL,
+    # Top reuses BOTTOM geometry — for this style the panels are visually identical.
     Part.TOP: PartType.BOTTOM,
 }
-
-
-BoxDimensionData = DimensionData
