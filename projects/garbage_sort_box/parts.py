@@ -4,13 +4,9 @@ from .project_data import PartType
 
 
 class Builder(BuilderABC):
-    top_divider_y = 300
-    top_divider_z = 300
-
     def __init__(self, dim: DimensionData):
         super().__init__(dim)
         # Calculated dimensions
-        self.top_divider_x = self.dim.x_len - self.dim.mat_thickness
         self.route_depth = self.dim.mat_thickness / 2
         self.offset = self.dim.mat_thickness - self.route_depth
         self.panel_y = self.dim.y_len - 2 * self.offset

@@ -1,3 +1,19 @@
+"""
+CQ-editor playground / launcher.
+
+Open this file in CQ-editor and run it. ``show_object`` (used at the bottom)
+is provided by the CQ-editor environment and is undefined when this script is
+run as a normal Python script.
+
+Imports reach into three different repo locations:
+  - ``py_cad.primitives.…``  : library primitives (installed via ``uv sync``)
+  - ``projects.…``           : ad-hoc user projects in this repo
+  - ``tests.test_project.…`` : test fixture used as a demo
+The ``projects.…`` and ``tests.…`` styles only resolve when the working
+directory is the repo root, which CQ-editor normally honors.
+"""
+
+
 def get_garbage_sort_box():
     from projects.garbage_sort_box.project_data import DIMENSION_DATA
     from projects.garbage_sort_box.assembly import Assembler, Part

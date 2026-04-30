@@ -4,9 +4,6 @@ from .project_data import PartType
 
 
 class PartialBuilderBase(BuilderABC):
-    top_divider_y = 300
-    top_divider_z = 300
-
     @BuilderABC.register(PartType.BOTTOM)
     def get_bottom(self) -> cq.Workplane:
         btm = self.dim[PartType.BOTTOM]

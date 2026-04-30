@@ -106,25 +106,17 @@ It holds global dimensions AND per-part-type sub-dimensions on the same object. 
 
 ## Priority 4 — Cleanup punchlist
 
-### [ ] Fix `show_objects.py` mixed import paths
+### [x] Fix `show_objects.py` mixed import paths
 
-Lines 2-3 use the wrong style (`from projects.garbage_sort_box.…` — works only if run from the project root with `projects/` on `sys.path`); lines 13-15 use the correct package-relative style (`from py_cad.primitives.…`). Pick one consistently — the `py_cad.primitives.…` style is more robust.
+**Resolution (2026-04-30):** Re-evaluated the original concern: the "mixed" import paths weren't actually wrong — `py_cad.primitives.…` reaches the installed library, while `projects.…` and `tests.…` reach repo-relative directories that aren't part of the package and have no alternative path. The mix reflects the genuine repo structure. After the deletion of `generic_plywood_box.py` (which was the one weak case), the remaining mix is correct.
 
-Also, this file is meant to be loaded into CQ-editor — lines 79 (`show_object(assembly, name)`) only works in that context. Add a top-of-file comment saying so.
+What was actually missing was the context — added a top-of-file docstring explaining: (1) the file is a CQ-editor playground (`show_object` is provided by that environment), and (2) the `projects.…` / `tests.…` imports require running from the repo root, which CQ-editor honors.
 
 ---
 
-### [ ] Drop dead `top_divider_y/z` class attributes
+### [x] Drop dead `top_divider_y/z` class attributes
 
-**Where:** `src/py_cad/primitives/plywood_box/parts.py:7-8`, `projects/garbage_sort_box/parts.py:7-8`, `tests/test_project/parts.py:7-8`
-
-```python
-class Builder(BuilderABC):
-    top_divider_y = 300   # never referenced
-    top_divider_z = 300   # never referenced
-```
-
-Delete them. `top_divider_x` (set in `__init__`) is real.
+**Resolution (2026-04-30):** Removed from all three files (`src/py_cad/primitives/plywood_box/parts.py`, `projects/garbage_sort_box/parts.py`, `tests/test_project/parts.py`). Also removed the matching `self.top_divider_x` assignment in `__init__` of the two Builders (plywood_box and garbage_sort_box) after grep confirmed zero reads anywhere in the codebase.
 
 ---
 
