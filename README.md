@@ -113,7 +113,7 @@ ROUTE_DEPTH = MATERIAL_THICKNESS_MAP[Material.SOLID_WOOD] / 2
 
 **Note:**
 You can also use an iterable of plain strings for `Part`/`PartType` and the corresponding strings for `PART_TYPE_MAP`.
-If all your parts have a unique template, just omit `part_types` and `PART_TYPE_MAP` and use Part both for the Builder (when using @BuilderABC.register(...)) and Assembler (as keys in get_metadata_map).
+If all your parts have a unique template (1:1 mapping), just omit `PART_TYPE_MAP` and use the same `Part` enum for the Builder (when using `@BuilderABC.register(...)`) and Assembler (as keys in `get_metadata_map`). The framework will resolve the part_map to identity automatically.
 
 ---
 
@@ -179,8 +179,8 @@ BOX_DIMENSIONS = BoxDimensionData(
 Once initialized, all dimensions and attributes per part type can be accessed like a dictionary:
 
 ```python
-dim_data = MyDimensionData(...)
-thickness = dim_data[PartType.BOTTOM].material_thickness # Available through part_type_attributes
+dim_data = BoxDimensionData(...)
+thickness = dim_data[PartType.BOTTOM].mat_thickness # Available through part_type_attributes
 length = dim_data[PartType.BOTTOM].x_len # Set in get_part_types_dimensions
 ```
 
