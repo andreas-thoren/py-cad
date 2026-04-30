@@ -1,5 +1,6 @@
 import unittest
 from enum import auto
+
 from py_cad import StrAutoEnum
 
 

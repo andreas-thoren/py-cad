@@ -1,5 +1,7 @@
 import cadquery as cq
+
 from py_cad import BuilderABC
+
 from .project_data import PartType
 
 

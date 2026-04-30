@@ -1,10 +1,10 @@
 import unittest
 from enum import StrEnum
+
 from py_cad.enum_helpers import create_str_enum, extend_str_enum
 
 
 class TestEnumHelpers(unittest.TestCase):
-
     def test_create_enum_from_list(self):
         MyEnum = create_str_enum("MyEnum", ["apple", "banana"])
         self.assertTrue(issubclass(MyEnum, StrEnum))
@@ -20,9 +20,7 @@ class TestEnumHelpers(unittest.TestCase):
 
     def test_extend_enum_with_list(self):
         BaseEnum = create_str_enum("BaseEnum", ["one", "two"])
-        ExtendedEnum = extend_str_enum(
-            BaseEnum, ["three", "four"], class_name="ExtendedEnum"
-        )
+        ExtendedEnum = extend_str_enum(BaseEnum, ["three", "four"], class_name="ExtendedEnum")
         members = set(ExtendedEnum.__members__)
         self.assertEqual({"ONE", "TWO", "THREE", "FOUR"}, members)
         self.assertEqual(ExtendedEnum.THREE.value, "three")
@@ -48,9 +46,7 @@ class TestEnumHelpers(unittest.TestCase):
         BaseEnum = create_str_enum("BaseEnum", ["apple", "banana"])
         self.assertEqual(BaseEnum.BANANA, "banana")
         NextEnum = StrEnum("NextEnum", {"BANANA": "banana2"})
-        ExtEnum = extend_str_enum(
-            BaseEnum, NextEnum, class_name="ExtEnum", replace_dups=True
-        )
+        ExtEnum = extend_str_enum(BaseEnum, NextEnum, class_name="ExtEnum", replace_dups=True)
         self.assertEqual(ExtEnum.BANANA, "banana2")
 
     def test_extend_enum_without_replacement(self):

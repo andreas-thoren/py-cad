@@ -1,6 +1,7 @@
 from enum import auto
+
 from py_cad import StrAutoEnum
-from py_cad.primitives.basic_box import Assembler, Builder, BoxDimensionData, PartType
+from py_cad.primitives.basic_box import Assembler, BoxDimensionData, Builder, PartType
 
 # Basic dimensions
 BOX_X = 400

@@ -1,5 +1,5 @@
-from .parts import Builder
 from .assembly import Assembler
-from .project_data import Part, PartType, BoxDimensionData
+from .parts import Builder
+from .project_data import BoxDimensionData, Part, PartType
 
 __all__ = ["Assembler", "Builder", "Part", "PartType", "BoxDimensionData"]

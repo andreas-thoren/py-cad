@@ -53,8 +53,10 @@ uv run cq-editor
 # Tests (uses unittest, NOT pytest)
 uv run python -m unittest discover tests
 
-# Format
-uv run black .
+# Lint + format (ruff handles both; replaces black)
+uv run ruff check          # report issues
+uv run ruff check --fix    # auto-fix safe issues
+uv run ruff format         # apply formatting
 ```
 
 `pyproject.toml` declares `required-environments` for both Linux x86_64 and Windows AMD64; the lockfile pins `pyqt5-qt5==5.15.2` because that's the last version with wheels on both. The author uses both OSes.
@@ -78,7 +80,7 @@ uv run black .
 - `from __future__ import annotations` is **not** used; the project requires Python 3.10+ and uses real `|` unions in annotations directly.
 - Docstrings are present on most public methods and are detailed. Match the style if adding code.
 - Tests use `unittest`, not pytest. Keep that.
-- The author leaves `# pylint: disable=...` comments inline despite no pylint config — these come from their IDE. Don't add new ones unnecessarily but don't strip existing ones either.
+- Lint and format are handled by `ruff` (configured in `pyproject.toml` `[tool.ruff]`, line-length 100, rule families E/F/I). `show_objects.py` is fully excluded via `extend-exclude` because it relies on CQ-editor's runtime `show_object` and the script style isn't worth shaping.
 - `cq.Workplane` is the build output; `cq.Assembly` is the assemble output; `cq.Color("burlywood")` is the default part color (set in `AssemblerABC.__init__`).
 
 ## Common pitfalls

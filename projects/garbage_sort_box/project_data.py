@@ -1,5 +1,6 @@
 from enum import auto
-from py_cad import StrAutoEnum, DimensionData
+
+from py_cad import DimensionData, StrAutoEnum
 
 
 class Part(StrAutoEnum):

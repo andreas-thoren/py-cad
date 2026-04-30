@@ -10,8 +10,10 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Sequence
 from enum import StrEnum
 from typing import Any
+
 import cadquery as cq
-from .helpers import NormalizedDict, InheritanceMixin, _PostInitMeta
+
+from .helpers import InheritanceMixin, NormalizedDict, _PostInitMeta
 
 
 class BasicDimensionData(metaclass=_PostInitMeta):
@@ -80,7 +82,8 @@ class BasicDimensionData(metaclass=_PostInitMeta):
             or not all(isinstance(d, (int, float)) for d in basic_dimensions)
         ):
             raise TypeError(
-                "basic_dimensions must be a Sequence (tuple, list, ...) of three numbers (x_len, y_len, z_len)."
+                "basic_dimensions must be a Sequence (tuple, list, ...) "
+                "of three numbers (x_len, y_len, z_len)."
             )
         self.update(**extra_dimensions)
         x_len, y_len, z_len = basic_dimensions
@@ -91,9 +94,7 @@ class BasicDimensionData(metaclass=_PostInitMeta):
     def freeze_existing_attributes(self):
         """Freeze existing attributes to prevent modification."""
         if not self._has_basic_dimensions:
-            raise ValueError(
-                "Cannot freeze existing attributes before setting basic dimensions."
-            )
+            raise ValueError("Cannot freeze existing attributes before setting basic dimensions.")
         self._freeze_existing_attributes = True
 
     def __setattr__(self, name, value):
@@ -170,7 +171,8 @@ class DimensionData(BasicDimensionData):
         for attr, dict_val in (part_type_attributes or {}).items():
             if not isinstance(dict_val, dict):
                 raise TypeError(
-                    f"Part type attributes for '{attr}' must be a dictionary mapping part types to values."
+                    f"Part type attributes for '{attr}' must be a dictionary "
+                    "mapping part types to values."
                 )
 
             for part_type, val in dict_val.items():
@@ -207,7 +209,7 @@ class DimensionData(BasicDimensionData):
         | tuple[tuple[int | float, int | float, int | float], dict[str, Any]],
     ]:
         """
-        Subclasses should override this method to return a mapping of part types to dimension tuples.
+        Subclasses should override to return a mapping of part types to dimension tuples.
         Each value must be either (x_len, y_len, z_len) or ((x_len, y_len, z_len), extra_dict).
         """
         return {}
@@ -291,9 +293,7 @@ class BuilderABC(InheritanceMixin, ABC):
         """Get the DimensionData instance used by this builder."""
         return self._dim
 
-    def build_part(
-        self, part_type: str, cached_solid: bool = False
-    ) -> cq.Workplane | cq.Solid:
+    def build_part(self, part_type: str, cached_solid: bool = False) -> cq.Workplane | cq.Solid:
         """
         Builds the part for the given part_type.
 
@@ -308,8 +308,7 @@ class BuilderABC(InheritanceMixin, ABC):
             build_func = self._builder_map[part_type]
         except KeyError as exc:
             raise ValueError(
-                f"Invalid part type: {part_type}!\n"
-                f"Available: {list(self._builder_map.keys())}"
+                f"Invalid part type: {part_type}!\nAvailable: {list(self._builder_map.keys())}"
             ) from exc
 
         if cached_solid:
@@ -324,9 +323,7 @@ class BuilderABC(InheritanceMixin, ABC):
         self._solid_cache.clear()
 
     @classmethod
-    def get_part(
-        cls, dim: DimensionData, part_type: str, *args, **kwargs
-    ) -> cq.Workplane:
+    def get_part(cls, dim: DimensionData, part_type: str, *args, **kwargs) -> cq.Workplane:
         """Convenience method to build a part without manually instantiating the builder."""
         builder = cls(dim, *args, **kwargs)
         return builder.build_part(part_type)
@@ -337,7 +334,7 @@ class BuilderABC(InheritanceMixin, ABC):
 
         def decorator(func):
             # Defer attaching into _builder_map until __init_subclass__
-            func._registered_part_type = part_type  # pylint: disable=protected-access
+            func._registered_part_type = part_type
             return func
 
         return decorator
@@ -389,12 +386,8 @@ class AssemblerABC(InheritanceMixin, ABC):
         super().__init_subclass__(**kwargs)
 
         # Check that BuilderClass is correct, move to private attribute.
-        if not hasattr(cls, "BuilderClass") or not issubclass(
-            cls.BuilderClass, BuilderABC
-        ):
-            raise TypeError(
-                f"{cls.__name__} must define BuilderClass as a BuilderABC subclass."
-            )
+        if not hasattr(cls, "BuilderClass") or not issubclass(cls.BuilderClass, BuilderABC):
+            raise TypeError(f"{cls.__name__} must define BuilderClass as a BuilderABC subclass.")
         cls._BuilderClass = cls.BuilderClass
 
         # Validate and normalize part_map
@@ -416,9 +409,7 @@ class AssemblerABC(InheritanceMixin, ABC):
         # that they are only intended for class setup. Point to resolved_part_types!
 
     @classmethod
-    def _resolve_part_map(
-        cls, part_map: NormalizedDict[str, str]
-    ) -> NormalizedDict[str, str]:
+    def _resolve_part_map(cls, part_map: NormalizedDict[str, str]) -> NormalizedDict[str, str]:
         """
         Resolve and returns part_map. 2 potential cases:
         1. part_map is defined in the current class. _resolved_part_map will be a
@@ -434,23 +425,22 @@ class AssemblerABC(InheritanceMixin, ABC):
             return parent_part_map | part_map
 
         mapped_part_types = set(parent_part_map.values())
-        part_types = cls._BuilderClass._resolved_part_types  # pylint: disable=w0212
-        new_mappings = NormalizedDict(
-            {pt: pt for pt in part_types if pt not in mapped_part_types}
-        )
+        part_types = cls._BuilderClass._resolved_part_types
+        new_mappings = NormalizedDict({pt: pt for pt in part_types if pt not in mapped_part_types})
         return new_mappings | parent_part_map
 
     @classmethod
     def _validate_resolved_part_map(cls):
         # Validate values of cls.part_map
         actual_values = frozenset(cls._resolved_part_map.values())
-        allowed_values = cls._BuilderClass._resolved_part_types  # pylint: disable=w0212
+        allowed_values = cls._BuilderClass._resolved_part_types
         invalid_values = actual_values - allowed_values
         if invalid_values:
+            invalid_values_str = "\n".join(invalid_values)
             raise ValueError(
                 f"{cls.__name__}: part_map contains invalid part type values "
                 "without registered build methods. Invalid values:\n"
-                f"{'\n'.join(invalid_values)}"
+                f"{invalid_values_str}"
             )
 
     def __init__(self, dim: DimensionData, color: cq.Color | None = None):
@@ -501,17 +491,13 @@ class AssemblerABC(InheritanceMixin, ABC):
             if parent_func is None or hasattr(parent_func, "__isabstractmethod__"):
                 continue
 
-            parent_map = NormalizedDict(
-                parent_func(self)  # pylint: disable=not-callable
-            )
+            parent_map = NormalizedDict(parent_func(self))
             # Younger parents come first in mro and should override older parents
             resolved_map = parent_map | resolved_map
 
         return resolved_map
 
-    def _get_assembly_data(
-        self, parts: Iterable[str]
-    ) -> list[tuple[cq.Workplane, dict]]:
+    def _get_assembly_data(self, parts: Iterable[str]) -> list[tuple[cq.Workplane, dict]]:
         """Helper used by 'assemble' to build parts and attach metadata."""
         data = []
         resolved_metadata_map = self._get_resolved_metadata_map()

@@ -1,6 +1,6 @@
-from .core import BasicDimensionData, DimensionData, BuilderABC, AssemblerABC
-from .helpers import StrAutoEnum, NormalizedDict
+from .core import AssemblerABC, BasicDimensionData, BuilderABC, DimensionData
 from .enum_helpers import create_str_enum, extend_str_enum
+from .helpers import NormalizedDict, StrAutoEnum
 
 __all__ = [
     "BasicDimensionData",

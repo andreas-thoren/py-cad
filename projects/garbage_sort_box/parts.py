@@ -1,5 +1,7 @@
 import cadquery as cq
+
 from py_cad import BuilderABC, DimensionData
+
 from .project_data import PartType
 
 
@@ -52,6 +54,4 @@ class Builder(BuilderABC):
 
     @BuilderABC.register(PartType.SHORT_SIDE_PANEL)
     def get_short_side_panel(self) -> cq.Workplane:
-        return cq.Workplane("YZ").box(
-            self.panel_y, self.panel_z, self.dim.mat_thickness
-        )
+        return cq.Workplane("YZ").box(self.panel_y, self.panel_z, self.dim.mat_thickness)

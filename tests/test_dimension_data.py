@@ -1,16 +1,16 @@
 import unittest
+
 from py_cad import BasicDimensionData, DimensionData
 
 
 class TestBasicDimensionData(unittest.TestCase):
-
     def test_basic_init_and_attributes(self):
         data = BasicDimensionData((1, 2, 3), a=10, b=20, freeze=True)
         self.assertEqual(data.x_len, 1)
         self.assertEqual(data.y_len, 2)
         self.assertEqual(data.z_len, 3)
-        self.assertEqual(data.a, 10)  # pylint: disable=no-member
-        self.assertEqual(data.b, 20)  # pylint: disable=no-member
+        self.assertEqual(data.a, 10)
+        self.assertEqual(data.b, 20)
         self.assertTrue(data._freeze_existing_attributes)
 
     def test_frozen_after_init(self):
@@ -48,7 +48,6 @@ class TestBasicDimensionData(unittest.TestCase):
 
 
 class TestDimensionData(unittest.TestCase):
-
     class MyDimData(DimensionData):
         def get_part_types_dimensions(self):
             return {"foo": (1, 2, 3), "bar": (4, 5, 6)}
@@ -98,9 +97,7 @@ class TestDimensionData(unittest.TestCase):
     def test_update_part_type_dim_formats(self):
         dim = BasicDimensionData(freeze=False)
         # Tuple format
-        basic_dims, extra_dims = DimensionData._normalize_part_type_dimensions(
-            (1, 2, 3)
-        )
+        basic_dims, extra_dims = DimensionData._normalize_part_type_dimensions((1, 2, 3))
         dim.set_basic_dimensions(basic_dims, **extra_dims)
         self.assertEqual(dim.x_len, 1)
         self.assertEqual(dim.y_len, 2)

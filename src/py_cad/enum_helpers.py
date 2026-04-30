@@ -30,7 +30,7 @@ def write_enum_file(cls: type[StrEnum], path: str, mode: str = "x"):
     Raises:
         ValueError: If the mode is not one of 'x', 'w', or 'a'.
     """
-    if not mode in {"x", "w", "a"}:
+    if mode not in {"x", "w", "a"}:
         raise ValueError("Mode should be 'x', 'w' or 'a'")
 
     pre_enum = "\n\n" if mode == "a" else "from enum import StrEnum\n\n\n"
@@ -75,9 +75,7 @@ def create_str_enum(
     Note:
         If multiple keys normalize to the same result, the last one wins silently.
     """
-    dct = (
-        members if isinstance(members, dict) else {member: member for member in members}
-    )
+    dct = members if isinstance(members, dict) else {member: member for member in members}
 
     if normalize_members:
         dct = normalize_dict(dct)
@@ -125,7 +123,7 @@ def extend_str_enum(
         members.update(new_members)
     else:
         for key, val in new_members.items():
-            if not key in members:
+            if key not in members:
                 members[key] = val
 
     class_name = class_name if class_name else enum_class.__name__

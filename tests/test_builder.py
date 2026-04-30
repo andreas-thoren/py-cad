@@ -1,7 +1,9 @@
 import unittest
+
 from cadquery import Workplane
-from tests.test_project.project_data import DIMENSION_DATA, PartType
+
 from tests.test_project.parts import PartialBuilderOuterLeaf
+from tests.test_project.project_data import DIMENSION_DATA, PartType
 
 
 class TestBuilderABC(unittest.TestCase):

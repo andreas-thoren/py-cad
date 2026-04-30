@@ -1,7 +1,9 @@
 import unittest
+
 from cadquery import Assembly
-from tests.test_project.project_data import DIMENSION_DATA, Part, PartType
+
 from tests.test_project.assembly import PartialAssemblerOuterLeaf
+from tests.test_project.project_data import DIMENSION_DATA, Part, PartType
 
 
 class TestAssemblerABC(unittest.TestCase):

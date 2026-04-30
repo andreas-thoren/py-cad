@@ -35,9 +35,7 @@ class NormalizedDict(UserDict, Generic[K, V]):
             return key.strip().lower()
         except AttributeError as exc:
             if raise_error:
-                raise TypeError(
-                    f"Keys must be strings, got {type(key).__name__}: {key!r}"
-                ) from exc
+                raise TypeError(f"Keys must be strings, got {type(key).__name__}: {key!r}") from exc
             return key
 
     def __getitem__(self, key: K) -> V:

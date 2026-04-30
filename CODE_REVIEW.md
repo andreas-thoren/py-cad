@@ -140,21 +140,13 @@ jobs:
 
 ---
 
-### [ ] Stray `# pylint: disable=…` comments without a pylint config
+### [x] Stray `# pylint: disable=…` comments without a pylint config
 
-Search results across the codebase:
-- `src/py_cad/primitives/basic_box/assembly.py:11,26`
-- `src/py_cad/primitives/plywood_box/assembly.py:11,26`
-- `projects/garbage_sort_box/assembly.py:11,23`
-- `tests/test_dimension_data.py:12,13`
-- `tests/test_project/assembly.py:32,50,67,84,104`
-- `src/py_cad/core.py:335,432,442,500`
+**Resolution (2026-04-30):** Replaced pylint with **ruff** as both the linter and formatter. `black` removed; `ruff` added to the dev group. `pyproject.toml` `[tool.ruff]` configured with line-length 100 and rule families E/F/I, plus `extend-exclude = ["show_objects.py"]` (CQ-editor playground). All ~14 pylint-disable comments stripped from Python source. Ruff auto-fix sorted imports and removed 5 unused imports.
 
-These come from your IDE flagging things pylint doesn't understand (decorators, dynamic attrs from `_PostInitMeta`). Two options:
-- Add a `pyproject.toml` `[tool.pylint]` config with the right exclusions, or
-- Strip them. They're noise without a configured linter.
+**Real bug surfaced by the lint pass:** `core.py` had `f"{'\n'.join(invalid_values)}"` — backslash inside an f-string expression is Python 3.12+ only (PEP 701). Since `requires-python = ">=3.10, <3.13"` allows 3.10/3.11, this would crash at parse time on those interpreters. Tests didn't catch it because `.python-version` pins 3.12. Fixed by extracting the join to a local variable.
 
-If you want a linter at all, consider `ruff` instead — much faster, fewer false positives on metaclass-heavy code.
+`uv run ruff check` and `uv run ruff format --check` now both clean. 43/43 tests pass.
 
 ---
 

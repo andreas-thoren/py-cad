@@ -15,8 +15,8 @@ directory is the repo root, which CQ-editor normally honors.
 
 
 def get_garbage_sort_box():
-    from projects.garbage_sort_box.project_data import DIMENSION_DATA
     from projects.garbage_sort_box.assembly import Assembler, Part
+    from projects.garbage_sort_box.project_data import DIMENSION_DATA
 
     part_types = list(Part)
     assy = Assembler.get_assembly(DIMENSION_DATA, visual_offset=20, assembly_parts=part_types)
@@ -24,11 +24,10 @@ def get_garbage_sort_box():
 
 
 def get_basic_box():
-    from py_cad.primitives.basic_box.project_data import Part
-    from py_cad.primitives.basic_box.assembly import Assembler
     from projects.generic_box import BOX_DIMENSIONS
+    from py_cad.primitives.basic_box.assembly import Assembler
+    from py_cad.primitives.basic_box.project_data import Part
 
-    # part_types = [Part.BOTTOM, Part.LONG_SIDE, Part.LONG_SIDE_INVERSE, Part.SHORT_SIDE_INVERSE, Part.TOP]
     part_types = list(Part)
     # print(part_types)
     visual_offset = 0
@@ -39,9 +38,9 @@ def get_basic_box():
 
 
 def get_basic_box_part():
-    from py_cad.primitives.basic_box.project_data import PartType
-    from py_cad.primitives.basic_box.parts import Builder
     from projects.generic_box import BOX_DIMENSIONS
+    from py_cad.primitives.basic_box.parts import Builder
+    from py_cad.primitives.basic_box.project_data import PartType
 
     part_type = PartType.TOP
     part = Builder.get_part(BOX_DIMENSIONS, part_type)
@@ -49,8 +48,8 @@ def get_basic_box_part():
 
 
 def get_test_project():
-    from tests.test_project.project_data import DIMENSION_DATA, Part
     from tests.test_project.assembly import PartialAssemblerOuterLeaf
+    from tests.test_project.project_data import DIMENSION_DATA
 
     assembler = PartialAssemblerOuterLeaf(DIMENSION_DATA)
     # assembly_parts = [Part.BOTTOM, Part.LONG_SIDE, Part.SHORT_SIDE]

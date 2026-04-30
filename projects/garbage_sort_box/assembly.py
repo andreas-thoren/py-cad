@@ -1,14 +1,15 @@
 import cadquery as cq
+
 from py_cad import AssemblerABC, DimensionData
+
 from .parts import Builder
-from .project_data import Part, PART_TYPE_MAP
+from .project_data import PART_TYPE_MAP, Part
 
 
 class Assembler(AssemblerABC):
     BuilderClass = Builder
     part_map = PART_TYPE_MAP.copy()
 
-    # pylint: disable=too-many-arguments, too-many-positional-arguments
     def __init__(
         self,
         dim: DimensionData,
@@ -20,7 +21,6 @@ class Assembler(AssemblerABC):
         self.z_offset = self.dim.z_len / 2
 
     def get_metadata_map(self) -> dict[Part, dict]:
-        # pylint: disable=no-value-for-parameter, too-many-function-args
         return {
             Part.BOTTOM: {
                 "loc": cq.Location((0, 0, 0)),

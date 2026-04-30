@@ -1,9 +1,11 @@
 import cadquery as cq
+
 from py_cad import AssemblerABC, DimensionData
+
 from .parts import (
+    PartialBuilderBase,
     PartialBuilderLeaf,
     PartialBuilderMid,
-    PartialBuilderBase,
     PartialBuilderOuterLeaf,
 )
 from .project_data import Part, PartType
@@ -29,7 +31,6 @@ class PartialAssemblerBase(AssemblerABC):
         self.assy_dst_top = visual_offset + self.dim.z_len / 2
 
     def get_metadata_map(self) -> dict[Part, dict]:
-        # pylint: disable=no-value-for-parameter, too-many-function-args
         return {
             Part.BOTTOM: {
                 "loc": cq.Location((0, 0, -self.assy_dst_bottom)),
@@ -47,7 +48,6 @@ class PartialAssemblerMidOne(PartialAssemblerBase):
 
     def get_metadata_map(self) -> dict[Part, dict]:
         return {
-            # pylint: disable=no-value-for-parameter
             Part.LONG_SIDE: {
                 "loc": cq.Location((0, self.assy_dst_y, 0)),
                 "name": "Long side panel",
@@ -64,7 +64,6 @@ class PartialAssemblerMidTwo(PartialAssemblerBase):
 
     def get_metadata_map(self) -> dict[Part, dict]:
         return {
-            # pylint: disable=no-value-for-parameter, too-many-function-args
             Part.LONG_SIDE_INVERSE: {
                 "loc": cq.Location((0, -self.assy_dst_y, 0), (0, 0, 1), 180),
                 "name": "Long side panel inverse",
@@ -81,7 +80,6 @@ class PartialAssemblerLeaf(PartialAssemblerMidOne, PartialAssemblerMidTwo):
     }
 
     def get_metadata_map(self) -> dict[Part, dict]:
-        # pylint: disable=no-value-for-parameter, too-many-function-args
         return {
             Part.SHORT_SIDE: {
                 "loc": cq.Location((self.assy_dst_x, 0, 0)),
@@ -101,7 +99,6 @@ class PartialAssemblerOuterLeaf(PartialAssemblerLeaf):
     # Testing implicit mapping of PartType.TOP
 
     def get_metadata_map(self) -> dict[Part, dict]:
-        # pylint: disable=no-value-for-parameter, too-many-function-args
         return {
             Part.TOP: {
                 "loc": cq.Location((0, 0, self.assy_dst_top), (1, 0, 0), 180),

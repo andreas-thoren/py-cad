@@ -1,6 +1,5 @@
 from py_cad import DimensionData
-from py_cad.primitives.plywood_box.assembly import Assembler, Part
-from py_cad.primitives.plywood_box.parts import Builder, PartType
+from py_cad.primitives.plywood_box.assembly import Assembler
 
 PLY_THICKNESS = 9
 BOX_DIMENSIONS = DimensionData(

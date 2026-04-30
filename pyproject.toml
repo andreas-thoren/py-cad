@@ -17,13 +17,27 @@ dependencies = [
 editor = ["cq-editor>=0.7"]
 
 [dependency-groups]
-dev = ["black"]
+dev = [
+    "ruff>=0.15.12",
+]
 
 [tool.uv]
 required-environments = [
   "sys_platform == 'win32' and platform_machine == 'AMD64'",
   "sys_platform == 'linux' and platform_machine == 'x86_64'",
 ]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+# show_objects.py is a CQ-editor playground (uses globals like `show_object`
+# provided by that runtime); exclude from both linting and formatting.
+extend-exclude = ["show_objects.py"]
+
+[tool.ruff.lint]
+# E (pycodestyle), F (pyflakes), I (isort). Conservative starting set;
+# add more rule families (B, UP, SIM, ...) later if you want.
+select = ["E", "F", "I"]
 
 [build-system]
 requires = ["setuptools>=61.0"]
