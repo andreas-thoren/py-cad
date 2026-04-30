@@ -15,7 +15,7 @@ Three names refer to the same project. This is messy but historical:
 | Name | Where |
 |---|---|
 | `py-cad` | repo folder, README title, GitHub URL |
-| `athor-sketches` | distribution name (`pyproject.toml` `name`) |
+| `py-cad` | distribution name (`pyproject.toml` `name`) |
 | `py_cad` | actual import (`from py_cad import ...`) |
 
 When writing code or docs, use `py_cad` for imports and `py-cad` for project references. Don't try to "fix" this without asking — it would touch every import.
