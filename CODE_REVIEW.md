@@ -22,33 +22,13 @@ The quality gap between `src/py_cad/` (carefully designed, well-tested) and the 
 
 ## Priority 1 — Real bugs (silent, fix soon)
 
-### [ ] `BuilderABC.build_part` strips arguments — kills the `invert_grooves` use case
+### [x] `BuilderABC.build_part` strips arguments — dead `invert_grooves` parameter
 
-**Where:** `src/py_cad/core.py:289-315`
+**Resolution (2026-04-30):** Picked Option B — dropped the dead args. Per the framework's design intent, a part is built one specific way; if a near-duplicate variant is needed in the future, register a separate method that internally calls the first with arguments. This keeps `build_part` simple (no `*args/**kwargs` forwarding) and avoids the cache-keying complications that forwarding would introduce.
 
-`build_part(part_type)` calls `build_func(self)` with no extra args. So the `invert_grooves=False` parameter on `src/py_cad/primitives/plywood_box/parts.py:19` and `projects/garbage_sort_box/parts.py:20` is **dead** — there's no path to pass it. The framework silently uses the default value forever.
-
-**Two ways to fix:**
-
-```python
-# Option A: forward args/kwargs (preferred — unlocks dead code)
-def build_part(self, part_type, cached_solid=False, *args, **kwargs):
-    ...
-    if cached_solid:
-        if part_type not in self._solid_cache:
-            self._solid_cache[part_type] = build_func(self, *args, **kwargs).val()
-        return self._solid_cache[part_type]
-    return build_func(self, *args, **kwargs)
-```
-
-Note: caching by part_type alone is wrong if args differ. Either key the cache by `(part_type, args, frozenset(kwargs.items()))` or document that caching is invalidated when args change.
-
-```python
-# Option B: drop the dead parameters
-# Remove invert_grooves from plywood_box/parts.py:19 and garbage_sort_box/parts.py:20
-```
-
-Pick A if you actually want parameterized variants; pick B if not.
+Files touched:
+- `src/py_cad/primitives/plywood_box/parts.py` — removed `invert_grooves` from `get_long_side_panel`, inlined `groove_face = "<Y"`
+- `projects/garbage_sort_box/parts.py` — same
 
 ---
 

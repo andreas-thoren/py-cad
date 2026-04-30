@@ -1,4 +1,4 @@
-from py_cad.primitives.plywood_box.assembly import Assembler
+from py_cad.primitives.plywood_box.assembly import Assembler, Part
 from py_cad.primitives.plywood_box.parts import Builder, PartType
 from projects.generic_plywood_box import BOX_DIMENSIONS
 

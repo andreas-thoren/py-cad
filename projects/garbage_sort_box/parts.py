@@ -17,20 +17,19 @@ class Builder(BuilderABC):
         self.panel_z = self.dim.z_len - self.offset
 
     @BuilderABC.register(PartType.LONG_SIDE_PANEL)
-    def get_long_side_panel(self, invert_grooves=False) -> cq.Workplane:
+    def get_long_side_panel(self) -> cq.Workplane:
         groove_offset = self.dim.x_len / 2 - self.dim.mat_thickness / 2
-        groove_face = ">Y" if invert_grooves else "<Y"
         divider_width = 50
 
         return (
             cq.Workplane("XZ")
             .box(self.dim.x_len, self.panel_z, self.dim.mat_thickness)
-            .faces(groove_face)
+            .faces("<Y")
             .workplane()
             .pushPoints([(groove_offset, 0), (-groove_offset, 0)])
             .rect(self.dim.mat_thickness, self.panel_z)
             .cutBlind(-self.route_depth)
-            .faces(groove_face)
+            .faces("<Y")
             .workplane()
             .moveTo(0, (self.panel_z - divider_width) / 2)
             .rect(self.dim.mat_thickness, divider_width)

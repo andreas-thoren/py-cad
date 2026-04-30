@@ -2,10 +2,8 @@ def get_garbage_sort_box():
     from projects.garbage_sort_box.project_data import DIMENSION_DATA
     from projects.garbage_sort_box.assembly import Assembler, Part
 
-    assembler = Assembler(DIMENSION_DATA)
-    assembly_parts = [Part.BOTTOM, Part.LONG_SIDE, Part.SHORT_SIDE]
-    # assembly = assembler.assemble(assembly_parts)
-    assy = assembler.assemble()
+    part_types = list(Part)
+    assy = Assembler.get_assembly(DIMENSION_DATA, visual_offset=20, assembly_parts=part_types)
     return assy, "Garbage Sort Box Assembly"
 
 
@@ -14,9 +12,9 @@ def get_plywood_box():
     from py_cad.primitives.plywood_box.assembly import Assembler
     from projects.generic_plywood_box import BOX_DIMENSIONS
 
-    part_types = [Part.BOTTOM, Part.LONG_SIDE, Part.SHORT_SIDE, Part.TOP]
-    # part_types = list(Part)
-    visual_offset = 0
+    # part_types = [Part.BOTTOM, Part.LONG_SIDE, Part.SHORT_SIDE, Part.TOP]
+    part_types = list(Part)
+    visual_offset = 20
     assy = Assembler.get_assembly(
         BOX_DIMENSIONS, visual_offset=visual_offset, assembly_parts=part_types
     )
@@ -69,11 +67,11 @@ def get_test_project():
     return assy, "Garbage Sort Box Assembly"
 
 
-# assembly, name = get_garbage_sort_box()
+assembly, name = get_garbage_sort_box()
 # assembly, name = get_test_project()
 # assembly, name = get_plywood_box_part()
 # assembly, name = get_plywood_box()
-assembly, name = get_basic_box()
+# assembly, name = get_basic_box()
 # assembly, name = get_basic_box_part()
 
 show_object(assembly, name)
