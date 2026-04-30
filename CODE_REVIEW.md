@@ -92,25 +92,9 @@ Edge case left unaddressed: `bytes`/`bytearray` of length 3 still pass (their el
 
 ---
 
-### [ ] `projects/generic_plywood_box.py` is incomplete
+### [x] `projects/generic_plywood_box.py` is incomplete
 
-```python
-from py_cad.primitives.plywood_box.project_data import BoxDimensionData
-
-BOX_X = 300
-BOX_Y = 200
-BOX_Z = 200
-PLY_THICKNESS = 9
-ROUTE_DEPTH = PLY_THICKNESS / 2
-
-BOX_DIMENSIONS = BoxDimensionData(
-    (BOX_X, BOX_Y, BOX_Z), mat_thickness=PLY_THICKNESS, route_depth=ROUTE_DEPTH
-)
-```
-
-It only constructs `BOX_DIMENSIONS`. Compare to `projects/generic_box.py` which has `get_builder()`/`get_assembler()` helpers. Either:
-- Add the same helpers, or
-- Delete this file (it's used by `man_testing.py` only for `BOX_DIMENSIONS` import — that import would still work either way as long as the constants stay)
+**Resolution (2026-04-30):** Deleted — the file was a 12-line constants module not pulling its weight. Inlined the `BOX_DIMENSIONS` construction in `man_testing.py`, and added a small `_plywood_box_dimensions()` helper at the top of `show_objects.py` so the two consuming functions there share a single source. `projects/garbage_sort_box/` and `projects/generic_box.py` remain.
 
 ---
 
