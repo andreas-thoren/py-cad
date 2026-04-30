@@ -10,12 +10,20 @@ authors = [
 ]
 
 dependencies = [
-  "cadquery",
-  # "CQ-editor",  # Kan installeras separat om du vill använda CQ-editor
+  "cadquery>=2.4",
 ]
 
 [project.optional-dependencies]
+editor = ["cq-editor>=0.7"]
+
+[dependency-groups]
 dev = ["black"]
+
+[tool.uv]
+required-environments = [
+  "sys_platform == 'win32' and platform_machine == 'AMD64'",
+  "sys_platform == 'linux' and platform_machine == 'x86_64'",
+]
 
 [build-system]
 requires = ["setuptools>=61.0"]

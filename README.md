@@ -17,13 +17,32 @@ All **part names** and **metadata keys** are normalized to lowercase strings int
 
 ## 📦 Installation
 
+This project is managed with [uv](https://docs.astral.sh/uv/).
+
+**For contributors** (creates `.venv`, installs project + dev tools, locks deps):
+
 ```bash
 git clone https://github.com/andreas-thoren/py-cad.git
 cd py-cad
-pip install .
+uv sync
+uv run python -m unittest discover tests
 ```
 
-> Ensure the package is installed for imports and tests to function correctly. This package is not currently published on PyPI. It must be installed locally from source.
+**For end users** (install into an existing environment):
+
+```bash
+uv pip install git+https://github.com/andreas-thoren/py-cad.git
+```
+
+To also pull in [CQ-editor](https://github.com/CadQuery/CQ-editor) for visualizing assemblies, use the `editor` extra:
+
+```bash
+uv pip install "py-cad[editor] @ git+https://github.com/andreas-thoren/py-cad.git"
+# or, from a local clone:
+uv sync --extra editor
+```
+
+> This package is not published on PyPI — it must be installed from source. If you prefer plain `pip`, `pip install .` (or `pip install ".[editor]"`) still works since the project uses a standard PEP 621 `pyproject.toml`.
 
 ---
 
