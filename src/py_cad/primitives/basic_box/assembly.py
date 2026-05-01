@@ -14,8 +14,10 @@ class Assembler(AssemblerABC):
         self,
         dim: DimensionData,
         visual_offset: int = 0,
+        *,
+        builder=None,
     ):
-        super().__init__(dim)
+        super().__init__(dim, builder=builder)
         btm_z = self.dim[PartType.BOTTOM].z_len
 
         self.assy_dst_x = (self.dim.x_len / 2) + visual_offset - self.dim.routed_x_len

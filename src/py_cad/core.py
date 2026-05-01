@@ -443,17 +443,40 @@ class AssemblerABC(InheritanceMixin, ABC):
                 f"{invalid_values_str}"
             )
 
-    def __init__(self, dim: DimensionData, color: cq.Color | None = None):
+    def __init__(
+        self,
+        dim: DimensionData,
+        color: cq.Color | None = None,
+        *,
+        builder: BuilderABC | None = None,
+    ):
         """
         Initialize assembler and builder.
 
         Args:
             dim (DimensionData): DimensionData instance containing
                 the dimensions of the assembly.
+            color: Optional default color for parts in the assembly.
+            builder: Optional pre-built ``BuilderABC`` instance to reuse.
+                Must be an instance of ``self.BuilderClass`` and its
+                ``dim`` must be the same instance as ``dim``. If omitted
+                (default), a new builder is created from ``dim``. Useful
+                for sharing one builder between e.g. ``export_part_types``
+                and ``export_assembly``.
         """
         self._dim = dim
         self.color = color or cq.Color("burlywood")
-        self.builder = self._BuilderClass(dim)
+        if builder is None:
+            self.builder = self._BuilderClass(dim)
+        else:
+            if not isinstance(builder, self._BuilderClass):
+                raise TypeError(
+                    f"builder must be an instance of {self._BuilderClass.__name__}, "
+                    f"got {type(builder).__name__}"
+                )
+            if builder.dim is not dim:
+                raise ValueError("builder.dim must be the same DimensionData instance as `dim`.")
+            self.builder = builder
 
     @property
     def dim(self) -> DimensionData:

@@ -14,8 +14,10 @@ class Assembler(AssemblerABC):
         self,
         dim: DimensionData,
         visual_offset: int = 0,
+        *,
+        builder=None,
     ):
-        super().__init__(dim)
+        super().__init__(dim, builder=builder)
         self.x_offset = visual_offset + (self.dim.x_len - self.dim.mat_thickness) / 2
         self.y_offset = visual_offset + (self.dim.y_len - self.dim.mat_thickness) / 2
         self.z_offset = self.dim.z_len / 2
