@@ -139,7 +139,7 @@ A typical subclass involves:
   * A tuple containing `(x_len, y_len, z_len)` plus a dictionary of additional named dimensions.
 
 **Note:**
-For simple projects subclassing DimensionData is not always needed. In those cases just create an instance of DimensionData directly.
+Minimal projects can instantiate `DimensionData` directly without subclassing. However, the **planned drawing export feature** (per-PartType DXF drawings + assembly STEP + isometric overview) iterates `dim.part_types_dimensions` to discover each PartType's L×W×T — projects without `get_part_types_dimensions` won't be exportable. Subclass `DimensionData` and implement `get_part_types_dimensions` whenever you want export support, even if the per-PartType values are simple to compute.
 
 ```python
 from py_cad import DimensionData
