@@ -1,8 +1,9 @@
 """Tests for ``py_cad.export.export_part_types`` and ``export_assembly``.
 
-Phase 1 supports only STEP. Tests use the existing
-``tests/test_project`` fixture (subclassed DimensionData with a fully
-registered builder + assembler) and a temporary directory per test.
+Covers STEP (default) and SVG output, plus format dispatch behavior.
+Tests use the existing ``tests/test_project`` fixture (subclassed
+DimensionData with a fully registered builder + assembler) and a
+temporary directory per test.
 """
 
 import tempfile
@@ -155,6 +156,55 @@ class TestFormatDispatch(unittest.TestCase):
                     file_format=fmt,
                 )
                 self.assertEqual(paths[0].suffix, ".step")
+
+
+class TestSvgFormat(unittest.TestCase):
+    """Phase 2 SVG output. Verifies that ``file_format=".svg"`` produces
+    valid SVG files from both export entry points. SVG is a paper-friendly
+    format intended for workshop printouts."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.builder = PartialBuilderOuterLeaf(DIMENSION_DATA)
+        cls.assembler = PartialAssemblerOuterLeaf(DIMENSION_DATA)
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.tmp_dir = Path(self._tmp.name)
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    @staticmethod
+    def _looks_like_svg(path: Path) -> bool:
+        text = path.read_text(encoding="utf-8", errors="replace")
+        head = text.splitlines()[0]
+        return head.startswith("<?xml") and "<svg" in text
+
+    def test_part_types_emits_one_svg_per_part_type(self):
+        paths = export_part_types(self.builder, self.tmp_dir, file_format=".svg")
+        self.assertEqual(len(paths), len(self.builder.part_types))
+        for path in paths:
+            with self.subTest(path=path.name):
+                self.assertEqual(path.suffix, ".svg")
+                self.assertTrue(path.exists())
+                self.assertTrue(self._looks_like_svg(path))
+
+    def test_assembly_emits_single_svg(self):
+        path = export_assembly(self.assembler, self.tmp_dir / "assy.svg", file_format=".svg")
+        self.assertEqual(path.suffix, ".svg")
+        self.assertTrue(self._looks_like_svg(path))
+
+    def test_assembly_subset_as_svg(self):
+        # A partial assembly should still flatten cleanly to a Compound
+        # and emit valid SVG.
+        path = export_assembly(
+            self.assembler,
+            self.tmp_dir / "subset.svg",
+            parts=[Part.BOTTOM],
+            file_format=".svg",
+        )
+        self.assertTrue(self._looks_like_svg(path))
 
 
 if __name__ == "__main__":

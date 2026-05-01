@@ -36,8 +36,8 @@ def main() -> None:
     # Build one Builder up front. Both exports share it.
     builder = get_builder()
 
-    part_paths = export_part_types(builder, OUT)
-    print(f"Wrote {len(part_paths)} part STEP files in {OUT}/")
+    part_paths = export_part_types(builder, OUT, file_format=".svg")
+    print(f"Wrote {len(part_paths)} part files in {OUT}/")
     for path in part_paths:
         print(f"  {path.name} ({path.stat().st_size:,} bytes)")
 
@@ -46,7 +46,7 @@ def main() -> None:
     # would otherwise do on its own.
     assembler = Assembler(BOX_DIMENSIONS, builder=builder)
 
-    assembly_path = export_assembly(assembler, OUT / "assembly.step")
+    assembly_path = export_assembly(assembler, OUT / "assembly.svg", file_format=".svg")
     print(f"Wrote {assembly_path.name} ({assembly_path.stat().st_size:,} bytes)")
 
 

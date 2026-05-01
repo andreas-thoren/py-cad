@@ -19,7 +19,7 @@ from types import ModuleType
 
 from ..core import AssemblerABC, BuilderABC
 from ..helpers import NormalizedDict
-from . import _step
+from . import _step, _svg
 
 __all__ = ["export_part_types", "export_assembly"]
 
@@ -27,6 +27,7 @@ __all__ = ["export_part_types", "export_assembly"]
 # ``write_part(workplane, path)`` and ``write_assembly(assembly, path)``.
 _FORMAT_HANDLERS: dict[str, ModuleType] = {
     ".step": _step,
+    ".svg": _svg,
 }
 
 
