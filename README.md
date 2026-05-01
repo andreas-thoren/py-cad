@@ -251,6 +251,18 @@ class Builder(BuilderABC):
         )
 ```
 
+**Quickly inspecting a single part during development:** while iterating on a build method, you can render an individual part directly in CQ-editor without going through the full assembly:
+
+```python
+builder = Builder(BOX_DIMENSIONS)
+part = builder.build_part(PartType.LONG_SIDE_PANEL)
+show_object(part, "long_side_panel")  # If using CQ-editor
+
+# Or, equivalently, the classmethod shortcut (no explicit builder instance):
+part = Builder.get_part(BOX_DIMENSIONS, PartType.LONG_SIDE_PANEL)
+show_object(part, "long_side_panel")
+```
+
 ---
 
 ### ▶️ Assembler Definition
