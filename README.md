@@ -197,6 +197,7 @@ Subclass `BuilderABC`:
 
 * Define a **build method for each part type**. Register each method with `@BuilderABC.register(...)`.
 * A custom __init__ is usually not needed since dimensions should primarily be added to the DimensionData instance and not the builder instance.
+* Inside build methods, the project's `DimensionData` instance is available as `self.dim`. Per-PartType dimensions and attributes are accessed as `self.dim[PartType.X]`, which returns a `BasicDimensionData` exposing `.x_len`, `.y_len`, `.z_len`, plus any extras defined via `part_type_attributes` or `get_part_types_dimensions`.
 
 ```python
 import cadquery as cq
@@ -260,6 +261,7 @@ Subclass `AssemblerABC`:
 * Set `part_map` (mapping part → part_type; omit if 1:1)
 * Implement `get_metadata_map` which should return a mapping with parts as keys and dicts with keyword arguments for cq.Assembly().add as values. If name or color are not specified for a part, default values will be used automatically.
 * __init__ can optionally be provided as per below. Remember to call super().__init__(dim).
+* Inside `get_metadata_map` and any custom `__init__`, `self.dim` is the project's `DimensionData` instance (same `self.dim[PartType.X]` access pattern as in `BuilderABC`).
 
 ```python
 import cadquery as cq
