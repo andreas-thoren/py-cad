@@ -28,6 +28,7 @@ from py_cad import export_assembly, export_part_types
 from py_cad.primitives.basic_box import Assembler
 
 OUT = Path("out/generic_box")
+FILE_FORMAT = ".step"
 
 
 def main() -> None:
@@ -36,7 +37,7 @@ def main() -> None:
     # Build one Builder up front. Both exports share it.
     builder = get_builder()
 
-    part_paths = export_part_types(builder, OUT, file_format=".svg")
+    part_paths = export_part_types(builder, OUT, file_format=FILE_FORMAT)
     print(f"Wrote {len(part_paths)} part files in {OUT}/")
     for path in part_paths:
         print(f"  {path.name} ({path.stat().st_size:,} bytes)")
@@ -46,7 +47,7 @@ def main() -> None:
     # would otherwise do on its own.
     assembler = Assembler(BOX_DIMENSIONS, builder=builder)
 
-    assembly_path = export_assembly(assembler, OUT / "assembly.svg", file_format=".svg")
+    assembly_path = export_assembly(assembler, OUT / "assembly.step", file_format=FILE_FORMAT)
     print(f"Wrote {assembly_path.name} ({assembly_path.stat().st_size:,} bytes)")
 
 
